@@ -58,6 +58,16 @@
     },
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false,
+        "root": "./app"
+      },
+      "eas": {
+        "projectId": "127f9544-ad09-4303-9076-53534aae4c34"
+      }
+    },
+    "owner": "salim786"
   }
 }
