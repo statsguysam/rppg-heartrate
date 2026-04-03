@@ -54,7 +54,10 @@
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.statsguysam.rppgheartrate",
-      "versionCode": 3
+      "versionCode": 4,
+      "targetSdkVersion": 35,
+      "compileSdkVersion": 35,
+      "minSdkVersion": 24
     },
     "experiments": {
       "typedRoutes": true
