@@ -54,7 +54,7 @@
         "android.permission.RECORD_AUDIO"
       ],
       "package": "com.statsguysam.rppgheartrate",
-      "versionCode": 2
+      "versionCode": 3
     },
     "experiments": {
       "typedRoutes": true
