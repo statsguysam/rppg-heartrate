@@ -1,0 +1,68 @@
+{
+  "expo": {
+    "name": "Heart Rate Monitor",
+    "slug": "rppg-heartrate",
+    "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "scheme": "rppgapp",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0a0a0a"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Heart Rate Monitor uses your camera to detect subtle colour changes in your face caused by blood flow, to estimate your heart rate. No video is stored on our servers.",
+          "microphonePermission": "Microphone access is required for video recording. Audio is not processed or stored.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-router",
+        {
+          "root": "./app"
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.salimshaikh.rppgheartrate",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Heart Rate Monitor uses your camera to detect subtle colour changes in your face caused by blood flow, to estimate your heart rate. No video is stored on our servers.",
+        "NSMicrophoneUsageDescription": "Microphone access is required for video recording. Audio is not processed or stored.",
+        "UIRequiresFullScreen": true
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0a0a0a"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "package": "com.salimshaikh.rppgheartrate",
+      "versionCode": 1
+    },
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
+    },
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

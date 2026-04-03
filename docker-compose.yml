@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - UPLOAD_DIR=/tmp/rppg_uploads
+      - MAX_VIDEO_SIZE_MB=150
+      - MODEL_NAME=PhysMamba
+    # GPU support (uncomment if you have NVIDIA GPU + nvidia-docker)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Heart Rate Monitor — Measure HR from your face</title>
+  <style>
+    :root {
+      --bg: #0a0a0a; --bg2: #141414; --red: #ff4d6d;
+      --white: #ffffff; --grey: #888;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: var(--bg); color: var(--white); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+    header { max-width: 860px; margin: 0 auto; padding: 64px 24px 48px; text-align: center; }
+    .logo { width: 96px; height: 96px; background: var(--bg2); border: 3px solid var(--red);
+            border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+            font-size: 40px; margin-bottom: 24px; }
+    h1 { font-size: 2.4rem; font-weight: 800; line-height: 1.2; }
+    h1 span { color: var(--red); }
+    .tagline { color: var(--grey); font-size: 1.1rem; margin-top: 12px; line-height: 1.6; }
+    .badge-row { display: flex; gap: 12px; justify-content: center; margin-top: 32px; flex-wrap: wrap; }
+    .badge { background: var(--red); color: #fff; padding: 10px 24px; border-radius: 30px;
+             font-weight: 700; font-size: 0.95rem; text-decoration: none; }
+    .badge.outline { background: transparent; border: 2px solid var(--red); color: var(--red); }
+    section { max-width: 860px; margin: 0 auto; padding: 0 24px 64px; }
+    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+    .card { background: var(--bg2); border-radius: 16px; padding: 28px; border: 1px solid #222; }
+    .card-icon { font-size: 2rem; margin-bottom: 12px; }
+    .card h3 { font-size: 1.1rem; margin-bottom: 8px; }
+    .card p { color: var(--grey); font-size: 0.9rem; line-height: 1.6; }
+    h2 { font-size: 1.6rem; font-weight: 700; margin-bottom: 24px; margin-top: 48px; }
+    h2 span { color: var(--red); }
+    .privacy-block { background: var(--bg2); border-radius: 16px; padding: 32px; border: 1px solid #222; }
+    .privacy-block h3 { color: var(--red); font-size: 1rem; margin: 20px 0 8px; }
+    .privacy-block h3:first-child { margin-top: 0; }
+    .privacy-block p { color: var(--grey); font-size: 0.9rem; line-height: 1.7; }
+    .disclaimer { border: 1px solid #333; border-radius: 12px; padding: 20px; margin-top: 32px; color: var(--grey); font-size: 0.85rem; line-height: 1.7; }
+    footer { border-top: 1px solid #1a1a1a; text-align: center; padding: 32px 24px; color: var(--grey); font-size: 0.85rem; }
+    footer a { color: var(--red); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">♥</div>
+  <h1>Heart Rate <span>Monitor</span></h1>
+  <p class="tagline">Measure your heart rate using just your face and camera.<br/>
+     No wearable. No contact. Powered by AI.</p>
+  <div class="badge-row">
+    <a class="badge" href="https://play.google.com/store/apps/details?id=com.salimshaikh.rppgheartrate">
+      Get it on Google Play
+    </a>
+    <a class="badge outline" href="#privacy">Privacy Policy</a>
+  </div>
+</header>
+
+<section>
+  <h2>How it <span>Works</span></h2>
+  <div class="features">
+    <div class="card">
+      <div class="card-icon">📱</div>
+      <h3>Record 60 seconds</h3>
+      <p>Point your front camera at your face. Stay still in good lighting for one minute.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🤖</div>
+      <h3>AI Analysis</h3>
+      <p>PhysMamba — a state-of-the-art remote photoplethysmography model — detects the subtle blood-flow colour changes in your skin.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">❤️</div>
+      <h3>Instant Result</h3>
+      <p>Get your heart rate in BPM with a confidence score and the full PPG waveform visualised on screen.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>Track Over Time</h3>
+      <p>All readings are saved locally on your device. Review your history anytime — no account required.</p>
+    </div>
+  </div>
+
+  <h2 id="privacy">Privacy <span>Policy</span></h2>
+  <div class="privacy-block">
+    <p><strong>Last updated: April 2026 &nbsp;·&nbsp; Developer: Salim Shaikh &nbsp;·&nbsp; Contact: <a href="mailto:statsguysalim@gmail.com">statsguysalim@gmail.com</a></strong></p>
+
+    <h3>What we collect</h3>
+    <p>Heart Rate Monitor records a short video of your face solely to estimate your heart rate using remote photoplethysmography (rPPG). The video is transmitted over an encrypted HTTPS connection to our processing server, analysed, and <strong>immediately deleted</strong>. We do not store your video, any facial data, or any biometric identifiers.</p>
+
+    <h3>Heart rate readings</h3>
+    <p>Estimated BPM readings are stored <strong>locally on your device only</strong> using AsyncStorage. They are never uploaded, shared, or sold. You can delete all readings at any time from the History tab inside the app.</p>
+
+    <h3>Camera &amp; microphone</h3>
+    <p>Camera permission is required to record the face video. Microphone permission is required by the Android/iOS operating system for video recording; audio is never processed, transmitted, or stored.</p>
+
+    <h3>No third-party analytics</h3>
+    <p>This app contains no advertising SDKs, no tracking pixels, and no analytics libraries. It does not share any data with third parties.</p>
+
+    <h3>Children</h3>
+    <p>This app is not directed at children under 13 and does not knowingly collect data from children.</p>
+
+    <h3>Changes</h3>
+    <p>We may update this policy. The "last updated" date at the top will change when we do. Continued use after changes constitutes acceptance.</p>
+
+    <h3>Contact</h3>
+    <p>Questions? Email <a href="mailto:statsguysalim@gmail.com">statsguysalim@gmail.com</a></p>
+  </div>
+
+  <div class="disclaimer">
+    ⚕ <strong>Medical disclaimer:</strong> Heart Rate Monitor is not a medical device and is not intended to diagnose, treat, cure, or prevent any disease or health condition. Results are estimates and may vary based on lighting, movement, and skin tone. Always consult a qualified healthcare professional for medical advice.
+  </div>
+</section>
+
+<footer>
+  <p>© 2026 Salim Shaikh &nbsp;·&nbsp; <a href="mailto:statsguysalim@gmail.com">statsguysalim@gmail.com</a> &nbsp;·&nbsp; <a href="#privacy">Privacy Policy</a></p>
+</footer>
+
+</body>
+</html>

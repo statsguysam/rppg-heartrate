@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.env
+dist/
+build/
+.venv/
+venv/
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+*.hbc
+/android
+/ios
+
+# Secrets — never commit these
+google-play-service-account.json
+google-services.json
+GoogleService-Info.plist
+
+# macOS
+.DS_Store
