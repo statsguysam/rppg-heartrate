@@ -16,16 +16,20 @@ echo "============================================"
 echo ""
 
 # ── Step 1: Expo login ────────────────────────────────────────────────────────
-echo "▶ Step 1/4: Log in to Expo"
-echo "  → A browser window will open. Sign in or create a free account at expo.dev"
-echo "  → Use your email: statsguysalim@gmail.com"
-echo ""
-eas login --browser
+echo "▶ Step 1/4: Check Expo login"
+WHOAMI=$(eas whoami 2>&1) || true
+if echo "$WHOAMI" | grep -q "Not logged in"; then
+  echo "  → Opening browser to log in to expo.dev..."
+  eas login --browser
+else
+  echo "  → Already logged in as: $WHOAMI"
+fi
 
 # ── Step 2: Init EAS project (gets projectId) ────────────────────────────────
 echo ""
 echo "▶ Step 2/4: Register EAS project"
-eas init --id "" 2>/dev/null || eas init
+# eas init will create the project on expo.dev and write the real projectId into app.json
+eas init
 # Push the updated app.json (now has real projectId)
 cd ..
 git add mobile/app.json
