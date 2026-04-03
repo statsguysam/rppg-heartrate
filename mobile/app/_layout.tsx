@@ -22,6 +22,14 @@ export default function RootLayout() {
             presentation: "card",
           }}
         />
+        <Stack.Screen
+          name="privacy"
+          options={{
+            title: "Privacy Policy",
+            headerBackTitle: "Back",
+            presentation: "card",
+          }}
+        />
       </Stack>
     </>
   );

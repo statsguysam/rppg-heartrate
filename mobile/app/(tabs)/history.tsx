@@ -7,9 +7,10 @@ import {
   StyleSheet,
   SafeAreaView,
   Alert,
+  Linking,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, router } from "expo-router";
 
 interface Reading {
   id: string;
@@ -58,6 +59,18 @@ export default function HistoryScreen() {
     ]);
   };
 
+const Footer = () => (
+  <View style={styles.footer}>
+    <TouchableOpacity onPress={() => router.push("/privacy")}>
+      <Text style={styles.footerLink}>Privacy Policy</Text>
+    </TouchableOpacity>
+    <Text style={styles.footerDot}>·</Text>
+    <TouchableOpacity onPress={() => Linking.openURL("mailto:statsguysalim@gmail.com")}>
+      <Text style={styles.footerLink}>Contact</Text>
+    </TouchableOpacity>
+  </View>
+);
+
   if (history.length === 0) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -68,6 +81,7 @@ export default function HistoryScreen() {
             Your heart rate readings will appear here after you record a scan.
           </Text>
         </View>
+        <Footer />
       </SafeAreaView>
     );
   }
@@ -83,6 +97,7 @@ export default function HistoryScreen() {
             <Text style={styles.clearButtonText}>Clear All</Text>
           </TouchableOpacity>
         }
+        ListFooterComponent={<Footer />}
         renderItem={({ item }) => (
           <View style={styles.card}>
             <View style={styles.cardLeft}>
@@ -183,5 +198,21 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 8,
+  },
+  footer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 24,
+    gap: 8,
+  },
+  footerLink: {
+    color: "#FF4D6D",
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  footerDot: {
+    color: "#444",
+    fontSize: 13,
   },
 });
