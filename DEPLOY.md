@@ -15,7 +15,7 @@ gh repo create rppg-heartrate --public --source=. --push
 After this, go to:
   GitHub repo → Settings → Pages → Source: "Deploy from branch" → Branch: main → Folder: /docs
   
-Your privacy policy will be live at: https://salimshaikh.github.io/rppg-heartrate
+Your privacy policy will be live at: https://statsguysam.github.io/rppg-heartrate
 
 ---
 
@@ -46,7 +46,7 @@ eas build --platform android --profile production
 ### First-time Play Console setup (one-time, 10 min)
 1. Go to https://play.google.com/console (account 6248773114835935867)
 2. Create app → "Heart Rate Monitor" → Free → App
-3. App content → Privacy policy URL: https://salimshaikh.github.io/rppg-heartrate
+3. App content → Privacy policy URL: https://statsguysam.github.io/rppg-heartrate
 4. Store listing → fill details below
 
 ### Play Store listing copy (copy-paste ready)

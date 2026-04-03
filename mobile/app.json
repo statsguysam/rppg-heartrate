@@ -33,7 +33,7 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.salimshaikh.rppgheartrate",
+      "bundleIdentifier": "com.statsguysam.rppgheartrate",
       "buildNumber": "1",
       "infoPlist": {
         "NSCameraUsageDescription": "Heart Rate Monitor uses your camera to detect subtle colour changes in your face caused by blood flow, to estimate your heart rate. No video is stored on our servers.",
@@ -53,7 +53,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.salimshaikh.rppgheartrate",
+      "package": "com.statsguysam.rppgheartrate",
       "versionCode": 1
     },
     "extra": {

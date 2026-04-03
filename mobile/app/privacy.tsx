@@ -48,7 +48,7 @@ export default function PrivacyScreen() {
         <Text style={styles.body}>
           Developer: Salim Shaikh{"\n"}
           Email: statsguysalim@gmail.com{"\n"}
-          Support: https://salimshaikh.github.io/rppg-heartrate
+          Support: https://statsguysam.github.io/rppg-heartrate
         </Text>
       </ScrollView>
     </SafeAreaView>
