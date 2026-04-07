@@ -27,7 +27,7 @@ export default function RecordScreen() {
   const { cameraRef, state: recordState, elapsed, start, stop, reset: resetRecording } =
     useVideoRecording(handleRecordingComplete);
 
-  // Navigate to result screen when done
+  // Navigate to result screen when done, show Alert on error
   useEffect(() => {
     if (analyzeStatus === "done" && result) {
       router.push({
@@ -41,8 +41,14 @@ export default function RecordScreen() {
       });
       resetRecording();
       resetAnalyze();
+    } else if (analyzeStatus === "error" && error) {
+      Alert.alert(
+        "Analysis Failed",
+        error,
+        [{ text: "Try Again", onPress: () => { resetRecording(); resetAnalyze(); } }]
+      );
     }
-  }, [analyzeStatus, result]);
+  }, [analyzeStatus, result, error]);
 
   const handleReset = () => {
     resetRecording();
