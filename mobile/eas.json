@@ -16,7 +16,10 @@
     "production": {
       "autoIncrement": true,
       "android": { "buildType": "app-bundle" },
-      "ios": { "credentialsSource": "remote" }
+      "ios": { "credentialsSource": "remote" },
+      "env": {
+        "EXPO_PUBLIC_BACKEND_URL": "https://legitimate-cabin-pty-save.trycloudflare.com"
+      }
     }
   },
   "submit": {

@@ -24,8 +24,12 @@ export default function RecordScreen() {
     await analyze(uri);
   };
 
+  const handleRecordingError = (message: string) => {
+    Alert.alert("Recording Failed", message, [{ text: "OK" }]);
+  };
+
   const { cameraRef, state: recordState, elapsed, start, stop, reset: resetRecording } =
-    useVideoRecording(handleRecordingComplete);
+    useVideoRecording(handleRecordingComplete, handleRecordingError);
 
   // Navigate to result screen when done, show Alert on error
   useEffect(() => {

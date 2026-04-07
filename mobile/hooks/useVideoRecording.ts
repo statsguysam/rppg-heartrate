@@ -4,7 +4,10 @@ import { RECORDING_DURATION_MS } from "../constants/config";
 
 type RecordingState = "idle" | "recording" | "done";
 
-export function useVideoRecording(onComplete: (uri: string) => void) {
+export function useVideoRecording(
+  onComplete: (uri: string) => void,
+  onError?: (message: string) => void
+) {
   const cameraRef = useRef<CameraView>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [state, setState] = useState<RecordingState>("idle");
@@ -32,7 +35,13 @@ export function useVideoRecording(onComplete: (uri: string) => void) {
       if (result?.uri) {
         onComplete(result.uri);
         setState("done");
+      } else {
+        setState("idle");
+        onError?.("Recording failed: no video file was saved. Please try again.");
       }
+    }).catch((err: any) => {
+      setState("idle");
+      onError?.(err?.message ?? "Recording failed. Please try again.");
     });
   }, [state, onComplete]);
 
