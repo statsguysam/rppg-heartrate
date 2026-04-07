@@ -9,7 +9,7 @@ import {
 } from "react-native";
 
 interface UploadProgressProps {
-  status: "compressing" | "uploading" | "processing";
+  status: "uploading" | "processing";
   uploadProgress: number; // 0–1
 }
 
@@ -53,16 +53,10 @@ export default function UploadProgress({ status, uploadProgress }: UploadProgres
     <View style={styles.overlay}>
       <Animated.View style={[styles.spinner, { transform: [{ rotate }] }]} />
       <Text style={styles.title}>
-        {status === "compressing"
-          ? "Compressing video…"
-          : status === "uploading"
-          ? "Uploading video…"
-          : "Analyzing heart rate…"}
+        {status === "uploading" ? "Uploading video…" : "Analyzing heart rate…"}
       </Text>
       <Text style={styles.subtitle}>
-        {status === "compressing"
-          ? "Reducing file size for faster upload…"
-          : status === "uploading"
+        {status === "uploading"
           ? `${Math.round(uploadProgress * 100)}% uploaded`
           : "This takes ~20 seconds. Stay still!"}
       </Text>
