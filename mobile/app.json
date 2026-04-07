@@ -29,6 +29,16 @@
         {
           "root": "./app"
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "targetSdkVersion": 35,
+            "compileSdkVersion": 35,
+            "minSdkVersion": 24
+          }
+        }
       ]
     ],
     "ios": {
@@ -53,10 +63,7 @@
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.statsguysam.rppgheartrate",
-      "targetSdkVersion": 35,
-      "compileSdkVersion": 35,
-      "minSdkVersion": 24
+      "package": "com.statsguysam.rppgheartrate"
     },
     "experiments": {
       "typedRoutes": true
