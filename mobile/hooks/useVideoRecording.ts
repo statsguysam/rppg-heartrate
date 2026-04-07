@@ -1,8 +1,9 @@
 import { useRef, useState, useCallback } from "react";
 import { CameraView } from "expo-camera";
+import { Video } from "react-native-compressor";
 import { RECORDING_DURATION_MS } from "../constants/config";
 
-type RecordingState = "idle" | "recording" | "done";
+type RecordingState = "idle" | "recording" | "compressing" | "done";
 
 export function useVideoRecording(onComplete: (uri: string) => void) {
   const cameraRef = useRef<CameraView>(null);
@@ -26,10 +27,22 @@ export function useVideoRecording(onComplete: (uri: string) => void) {
       await stop();
     }, RECORDING_DURATION_MS);
 
-    // Start recording (expo-camera returns the URI when stopped)
-    cameraRef.current.recordAsync({ maxDuration: 65 }).then((result) => {
+    // Start recording at 480p to keep file size small (~8MB for 60s)
+    cameraRef.current.recordAsync({ maxDuration: 65, videoQuality: "480p" }).then(async (result) => {
       if (result?.uri) {
-        onComplete(result.uri);
+        setState("compressing");
+        try {
+          // Compress further on-device before upload (targets ~5MB)
+          const compressed = await Video.compress(result.uri, {
+            compressionMethod: "manual",
+            maxSize: 480,
+            bitrate: 800_000, // 800kbps — enough for rPPG colour analysis
+          });
+          onComplete(compressed);
+        } catch {
+          // If compression fails, send original — better than nothing
+          onComplete(result.uri);
+        }
         setState("done");
       }
     });

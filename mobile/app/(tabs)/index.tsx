@@ -89,7 +89,7 @@ export default function RecordScreen() {
     );
   }
 
-  const isProcessing = analyzeStatus === "uploading" || analyzeStatus === "processing";
+  const isProcessing = recordState === "compressing" || analyzeStatus === "uploading" || analyzeStatus === "processing";
   const countdown = Math.max(0, 60 - elapsed);
   const progress = elapsed / 60;
 
@@ -162,7 +162,10 @@ export default function RecordScreen() {
 
       {/* Processing overlay — shown on top of everything */}
       {isProcessing && (
-        <UploadProgress status={analyzeStatus as "uploading" | "processing"} uploadProgress={uploadProgress} />
+        <UploadProgress
+          status={recordState === "compressing" ? "compressing" : analyzeStatus as "uploading" | "processing"}
+          uploadProgress={uploadProgress}
+        />
       )}
     </View>
   );
