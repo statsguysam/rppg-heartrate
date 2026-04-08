@@ -47,9 +47,49 @@ def _run_inference(video_path: str) -> dict:
         return _run_chrom_fallback(video_path)
 
 
+def _trim_video(video_path: str, max_seconds: float = 30.0) -> str:
+    """
+    If video is longer than max_seconds, write a trimmed copy and return its path.
+    30s of facial video is sufficient for accurate rPPG; trimming keeps CPU time <30s.
+    """
+    import cv2, tempfile, os
+    cap = cv2.VideoCapture(video_path)
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.release()
+
+    max_frames = int(fps * max_seconds)
+    if total_frames <= max_frames:
+        return video_path  # already short enough
+
+    cap = cv2.VideoCapture(video_path)
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    tmp.close()
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    out = cv2.VideoWriter(tmp.name, fourcc, fps, (w, h))
+    written = 0
+    while written < max_frames:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        out.write(frame)
+        written += 1
+    cap.release()
+    out.release()
+    return tmp.name
+
+
 def _run_physmamba(video_path: str) -> dict:
     """Inference via open-rppg PhysMamba model."""
-    result = _model.process_video(video_path)
+    trimmed = _trim_video(video_path)
+    try:
+        result = _model.process_video(trimmed)
+    finally:
+        if trimmed != video_path:
+            import os
+            os.unlink(trimmed)
 
     # open-rppg returns a dict with at minimum 'hr' (BPM)
     bpm = float(result["hr"])
@@ -63,6 +103,20 @@ def _run_chrom_fallback(video_path: str) -> dict:
     CHROM baseline — runs without any ML model.
     Used when open-rppg is not installed (dev/test mode).
     """
+    import cv2
+    from scipy.signal import butter, filtfilt
+    from scipy.fft import fft, fftfreq
+
+    trimmed = _trim_video(video_path)
+    try:
+        return _run_chrom_on_file(trimmed)
+    finally:
+        if trimmed != video_path:
+            import os
+            os.unlink(trimmed)
+
+
+def _run_chrom_on_file(video_path: str) -> dict:
     import cv2
     from scipy.signal import butter, filtfilt
     from scipy.fft import fft, fftfreq
