@@ -28,8 +28,10 @@ async def upload_video(video_path: Path) -> str | None:
     try:
         filename = f"{uuid.uuid4()}.mp4"
         url = f"{SUPABASE_URL}/storage/v1/object/{BUCKET}/{filename}"
+        file_size = video_path.stat().st_size if video_path.exists() else 0
+        logger.info(f"Uploading video {filename} ({file_size/1024/1024:.1f}MB) to Supabase...")
 
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=120) as client:
             with open(video_path, "rb") as f:
                 video_bytes = f.read()
 
@@ -42,12 +44,13 @@ async def upload_video(video_path: Path) -> str | None:
                 },
                 content=video_bytes,
             )
+            logger.info(f"Supabase storage response: {resp.status_code} {resp.text[:200]}")
             resp.raise_for_status()
 
         public_url = f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET}/{filename}"
-        logger.info(f"Video uploaded to Supabase: {filename}")
+        logger.info(f"Video uploaded successfully: {public_url}")
         return public_url
 
     except Exception as e:
-        logger.warning(f"Video upload to Supabase failed (non-fatal): {e}")
+        logger.error(f"Video upload to Supabase failed: {type(e).__name__}: {e}")
         return None
