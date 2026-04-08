@@ -47,7 +47,7 @@ def _run_inference(video_path: str) -> dict:
         return _run_chrom_fallback(video_path)
 
 
-def _trim_video(video_path: str, max_seconds: float = 30.0) -> str:
+def _trim_video(video_path: str, max_seconds: float = 20.0) -> str:
     """
     If video is longer than max_seconds, write a trimmed copy and return its path.
     30s of facial video is sufficient for accurate rPPG; trimming keeps CPU time <30s.
