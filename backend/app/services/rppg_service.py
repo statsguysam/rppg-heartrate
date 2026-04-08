@@ -123,22 +123,33 @@ def _run_chrom_on_file(video_path: str) -> dict:
 
     cap = cv2.VideoCapture(video_path)
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
 
+    # Use center crop as face ROI — faster than per-frame face detection,
+    # valid since app instructs user to keep face in the oval guide
+    cy, cx = height // 2, width // 2
+    rh, rw = height // 3, width // 3
+    y1, y2 = cy - rh // 2, cy + rh // 2
+    x1, x2 = cx - rw // 2, cx + rw // 2
+
+    # Sample every 3rd frame — 10fps is sufficient for rPPG (HR 0.7–4Hz)
+    step = 3
     rgb_means = []
+    frame_idx = 0
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = face_cascade.detectMultiScale(gray, 1.1, 5)
-        if len(faces) > 0:
-            x, y, w, h = faces[0]
-            roi = frame[y : y + h, x : x + w]
+        if frame_idx % step == 0:
+            roi = frame[y1:y2, x1:x2]
             rgb_means.append(roi.reshape(-1, 3).mean(axis=0)[::-1])  # BGR→RGB
+        frame_idx += 1
     cap.release()
 
-    if len(rgb_means) < fps * 10:
+    effective_fps = fps / step
+    if len(rgb_means) < effective_fps * 10:
         raise RuntimeError("Insufficient face frames for CHROM analysis.")
 
     rgb = np.array(rgb_means, dtype=np.float32)
@@ -147,7 +158,7 @@ def _run_chrom_on_file(video_path: str) -> dict:
     X = 3 * norm[:, 0] - 2 * norm[:, 1]
     Y = 1.5 * norm[:, 0] + norm[:, 1] - 1.5 * norm[:, 2]
     # Bandpass 0.7–4 Hz
-    b, a = butter(3, [0.7, 4.0], btype="bandpass", fs=fps)
+    b, a = butter(3, [0.7, 4.0], btype="bandpass", fs=effective_fps)
     Xf = filtfilt(b, a, X)
     Yf = filtfilt(b, a, Y)
     alpha = Xf.std() / (Yf.std() + 1e-6)
@@ -155,13 +166,13 @@ def _run_chrom_on_file(video_path: str) -> dict:
 
     # HR via FFT
     N = len(signal)
-    freqs = fftfreq(N, d=1.0 / fps)
+    freqs = fftfreq(N, d=1.0 / effective_fps)
     power = np.abs(fft(signal)) ** 2
     valid = (freqs >= 0.7) & (freqs <= 4.0)
     peak_freq = freqs[valid][np.argmax(power[valid])]
     bpm = float(peak_freq * 60)
 
-    return {"bpm": bpm, "raw_signal": signal, "fps": fps}
+    return {"bpm": bpm, "raw_signal": signal, "fps": effective_fps}
 
 
 async def analyze_video(video_path: Path) -> dict:
