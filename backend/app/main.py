@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import health, analyze
+from app.routers import health, analyze, scans
 from app.services import rppg_service
 from app.config import settings
 
@@ -38,3 +38,4 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(analyze.router)
+app.include_router(scans.router)

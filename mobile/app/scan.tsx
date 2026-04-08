@@ -187,9 +187,9 @@ const styles = StyleSheet.create({
   permissionTitle: { color: "#fff", fontSize: 22, fontWeight: "700", textAlign: "center" },
   permissionSubtitle: { color: "#999", fontSize: 15, textAlign: "center", lineHeight: 22 },
   ovalGuide: {
-    position: "absolute", top: "18%", alignSelf: "center",
-    width: 200, height: 270, borderRadius: 100,
-    borderWidth: 2, borderColor: "#FF4D6D88", borderStyle: "dashed",
+    position: "absolute", top: "12%", alignSelf: "center",
+    width: 260, height: 340, borderRadius: 130,
+    borderWidth: 3, borderColor: "#FF4D6Dbb", borderStyle: "dashed",
   },
   topOverlay: { position: "absolute", top: 0, left: 0, right: 0, alignItems: "center", paddingTop: 8 },
   instructionCard: {

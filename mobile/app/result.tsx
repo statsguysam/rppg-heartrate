@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { saveScan } from "../services/api";
 
 import HeartRateDisplay from "../components/HeartRateDisplay";
 import WaveformChart from "../components/WaveformChart";
@@ -48,6 +49,18 @@ export default function ResultScreen() {
       }
     };
     save();
+
+    // Save to remote database (non-fatal if fails)
+    saveScan({
+      bpm: bpmVal,
+      confidence: confVal,
+      age: age ? parseInt(age) : undefined,
+      sex: sex || undefined,
+      activity: activity || undefined,
+      stress: stress || undefined,
+      caffeine: caffeine || undefined,
+      medications: medications || undefined,
+    });
   }, []);
 
   const bpmCategory = bpmVal < 60 ? "Bradycardia" : bpmVal > 100 ? "Tachycardia" : "Normal";

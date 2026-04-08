@@ -157,6 +157,9 @@ def _run_chrom_on_file(video_path: str) -> dict:
     norm = rgb / (rgb.mean(axis=0) + 1e-6)
     X = 3 * norm[:, 0] - 2 * norm[:, 1]
     Y = 1.5 * norm[:, 0] + norm[:, 1] - 1.5 * norm[:, 2]
+    # Combine channels (raw, pre-filter) — used for honest confidence scoring
+    raw_signal_prefilter = 3 * norm[:, 0] - 2 * norm[:, 1]  # X channel proxy
+
     # Bandpass 0.7–4 Hz
     b, a = butter(3, [0.7, 4.0], btype="bandpass", fs=effective_fps)
     Xf = filtfilt(b, a, X)
@@ -172,7 +175,7 @@ def _run_chrom_on_file(video_path: str) -> dict:
     peak_freq = freqs[valid][np.argmax(power[valid])]
     bpm = float(peak_freq * 60)
 
-    return {"bpm": bpm, "raw_signal": signal, "fps": effective_fps}
+    return {"bpm": bpm, "raw_signal": signal, "raw_prefilter": raw_signal_prefilter, "fps": effective_fps}
 
 
 async def analyze_video(video_path: Path) -> dict:
@@ -185,10 +188,12 @@ async def analyze_video(video_path: Path) -> dict:
 
     bpm = validate_bpm(raw["bpm"])
     signal: np.ndarray = raw.get("raw_signal", np.array([]))
+    # Use pre-filter signal for confidence — post-filter signal is always "clean"
+    confidence_signal: np.ndarray = raw.get("raw_prefilter", signal)
     fps: float = raw.get("fps", _model_fps)
 
     if len(signal) > 0:
-        confidence = estimate_confidence(signal, fps)
+        confidence = estimate_confidence(confidence_signal, fps)
         downsampled = downsample_waveform(signal, fps, to_fps=5)
         waveform = normalize_signal(downsampled).tolist()
     else:

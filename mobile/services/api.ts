@@ -43,6 +43,26 @@ export async function analyzeVideo(
   return response.data;
 }
 
+export interface ScanRecord {
+  bpm: number;
+  confidence: number;
+  age?: number;
+  sex?: string;
+  activity?: string;
+  stress?: string;
+  caffeine?: string;
+  medications?: string;
+  device_id?: string;
+}
+
+export async function saveScan(record: ScanRecord): Promise<void> {
+  try {
+    await client.post("/scans", record);
+  } catch {
+    // Non-fatal — don't surface DB errors to user
+  }
+}
+
 export async function checkHealth(): Promise<boolean> {
   try {
     const res = await client.get("/health", { timeout: 5000 });
