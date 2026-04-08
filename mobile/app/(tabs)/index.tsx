@@ -7,7 +7,7 @@ import {
   SafeAreaView,
   Alert,
 } from "react-native";
-import { CameraView, useCameraPermissions } from "expo-camera";
+import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
 import { router } from "expo-router";
 
 import { useVideoRecording } from "../../hooks/useVideoRecording";
@@ -18,6 +18,7 @@ import { RECORDING_DURATION_MS, MIN_DURATION_WARNING_MS } from "../../constants/
 
 export default function RecordScreen() {
   const [permission, requestPermission] = useCameraPermissions();
+  const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const { status: analyzeStatus, uploadProgress, result, error, analyze, reset: resetAnalyze } = useAnalyze();
 
   const handleRecordingComplete = async (uri: string) => {
@@ -75,18 +76,22 @@ export default function RecordScreen() {
     }
   };
 
-  if (!permission) return <View style={styles.container} />;
+  if (!permission || !micPermission) return <View style={styles.container} />;
 
-  if (!permission.granted) {
+  if (!permission.granted || !micPermission.granted) {
+    const requestAll = async () => {
+      if (!permission.granted) await requestPermission();
+      if (!micPermission.granted) await requestMicPermission();
+    };
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.permissionContainer}>
-          <Text style={styles.permissionTitle}>Camera Permission Required</Text>
+          <Text style={styles.permissionTitle}>Permissions Required</Text>
           <Text style={styles.permissionSubtitle}>
-            Heart Rate Monitor needs camera access to measure your heart rate from your face.
+            Heart Rate Monitor needs camera and microphone access to record video for heart rate analysis.
           </Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={requestPermission}>
-            <Text style={styles.primaryButtonText}>Grant Permission</Text>
+          <TouchableOpacity style={styles.primaryButton} onPress={requestAll}>
+            <Text style={styles.primaryButtonText}>Grant Permissions</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
