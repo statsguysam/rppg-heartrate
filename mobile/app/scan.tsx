@@ -17,7 +17,10 @@ import ErrorBanner from "../components/ErrorBanner";
 import { MIN_DURATION_WARNING_MS } from "../constants/config";
 
 export default function ScanScreen() {
-  const { age, activity } = useLocalSearchParams<{ age: string; activity: string }>();
+  const { age, sex, activity, stress, caffeine, medications } = useLocalSearchParams<{
+    age: string; sex: string; activity: string;
+    stress: string; caffeine: string; medications: string;
+  }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
   const { status: analyzeStatus, uploadProgress, result, error, analyze, reset: resetAnalyze } = useAnalyze();
@@ -43,7 +46,11 @@ export default function ScanScreen() {
           waveform: JSON.stringify(result.waveform),
           waveform_fps: result.waveform_fps.toString(),
           age: age ?? "",
+          sex: sex ?? "",
           activity: activity ?? "",
+          stress: stress ?? "",
+          caffeine: caffeine ?? "",
+          medications: medications ?? "",
         },
       });
       resetRecording();

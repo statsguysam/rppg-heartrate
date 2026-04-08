@@ -14,13 +14,9 @@ import HeartRateDisplay from "../components/HeartRateDisplay";
 import WaveformChart from "../components/WaveformChart";
 
 export default function ResultScreen() {
-  const { bpm, confidence, waveform, waveform_fps, age, activity } = useLocalSearchParams<{
-    bpm: string;
-    confidence: string;
-    waveform: string;
-    waveform_fps: string;
-    age: string;
-    activity: string;
+  const { bpm, confidence, waveform, waveform_fps, age, sex, activity, stress, caffeine, medications } = useLocalSearchParams<{
+    bpm: string; confidence: string; waveform: string; waveform_fps: string;
+    age: string; sex: string; activity: string; stress: string; caffeine: string; medications: string;
   }>();
 
   const bpmVal = parseFloat(bpm ?? "0");
@@ -39,7 +35,11 @@ export default function ResultScreen() {
           bpm: bpmVal,
           confidence: confVal,
           age: age ? parseInt(age) : null,
+          sex: sex || null,
           activity: activity || null,
+          stress: stress || null,
+          caffeine: caffeine || null,
+          medications: medications || null,
           timestamp: new Date().toISOString(),
         });
         await AsyncStorage.setItem("hr_history", JSON.stringify(history.slice(0, 50)));
@@ -57,10 +57,17 @@ export default function ResultScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         {/* Context card */}
-        {(age || activity) && (
+        {(age || sex || activity || stress || caffeine || medications) && (
           <View style={styles.contextCard}>
-            {age ? <Text style={styles.contextText}>Age: {age}</Text> : null}
-            {activity ? <Text style={styles.contextText}>Activity: {activity}</Text> : null}
+            <Text style={styles.contextTitle}>Scan context</Text>
+            <View style={styles.contextGrid}>
+              {age ? <View style={styles.contextItem}><Text style={styles.contextKey}>Age</Text><Text style={styles.contextVal}>{age}</Text></View> : null}
+              {sex ? <View style={styles.contextItem}><Text style={styles.contextKey}>Sex</Text><Text style={styles.contextVal}>{sex}</Text></View> : null}
+              {stress ? <View style={styles.contextItem}><Text style={styles.contextKey}>Stress</Text><Text style={styles.contextVal}>{stress}</Text></View> : null}
+              {caffeine ? <View style={styles.contextItem}><Text style={styles.contextKey}>Caffeine</Text><Text style={styles.contextVal}>{caffeine}</Text></View> : null}
+            </View>
+            {activity ? <Text style={styles.contextActivity}>Activity: {activity}</Text> : null}
+            {medications ? <Text style={styles.contextActivity}>Medications/conditions: {medications}</Text> : null}
           </View>
         )}
 
@@ -136,13 +143,22 @@ const styles = StyleSheet.create({
     width: "100%",
     backgroundColor: "#141414",
     borderRadius: 12,
-    padding: 14,
-    gap: 4,
+    padding: 16,
+    gap: 10,
   },
-  contextText: {
-    color: "#888",
-    fontSize: 13,
+  contextTitle: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  contextGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  contextItem: {
+    backgroundColor: "#1e1e1e",
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    minWidth: 80,
   },
+  contextKey: { color: "#666", fontSize: 11, fontWeight: "600" },
+  contextVal: { color: "#ccc", fontSize: 13, fontWeight: "600", marginTop: 2 },
+  contextActivity: { color: "#888", fontSize: 12, lineHeight: 18 },
+  contextText: { color: "#888", fontSize: 13 },
   categoryBadge: {
     borderWidth: 1,
     borderRadius: 20,
