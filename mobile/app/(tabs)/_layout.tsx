@@ -18,9 +18,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Record",
+          title: "Home",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="radio-button-on" size={size} color={color} />
+            <Ionicons name="heart-outline" size={size} color={color} />
           ),
           headerShown: false,
         }}

@@ -1,333 +1,177 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
-  Alert,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
-import { CameraView, useCameraPermissions, useMicrophonePermissions } from "expo-camera";
 import { router } from "expo-router";
 
-import { useVideoRecording } from "../../hooks/useVideoRecording";
-import { useAnalyze } from "../../hooks/useAnalyze";
-import UploadProgress from "../../components/UploadProgress";
-import ErrorBanner from "../../components/ErrorBanner";
-import { RECORDING_DURATION_MS, MIN_DURATION_WARNING_MS } from "../../constants/config";
+export default function HomeScreen() {
+  const [age, setAge] = useState("");
+  const [activity, setActivity] = useState("");
 
-export default function RecordScreen() {
-  const [permission, requestPermission] = useCameraPermissions();
-  const [micPermission, requestMicPermission] = useMicrophonePermissions();
-  const { status: analyzeStatus, uploadProgress, result, error, analyze, reset: resetAnalyze } = useAnalyze();
+  const canScan = age.trim().length > 0 && parseInt(age) > 0 && parseInt(age) < 130;
 
-  const handleRecordingComplete = async (uri: string) => {
-    await analyze(uri);
+  const handleStartScan = () => {
+    router.push({
+      pathname: "/scan",
+      params: { age: age.trim(), activity: activity.trim() },
+    });
   };
-
-  const handleRecordingError = (message: string) => {
-    Alert.alert("Recording Failed", message, [{ text: "OK" }]);
-  };
-
-  const { cameraRef, state: recordState, elapsed, start, stop, reset: resetRecording } =
-    useVideoRecording(handleRecordingComplete, handleRecordingError);
-
-  // Navigate to result screen when done, show Alert on error
-  useEffect(() => {
-    if (analyzeStatus === "done" && result) {
-      router.push({
-        pathname: "/result",
-        params: {
-          bpm: result.bpm.toString(),
-          confidence: result.confidence.toString(),
-          waveform: JSON.stringify(result.waveform),
-          waveform_fps: result.waveform_fps.toString(),
-        },
-      });
-      resetRecording();
-      resetAnalyze();
-    } else if (analyzeStatus === "error" && error) {
-      Alert.alert(
-        "Analysis Failed",
-        error,
-        [{ text: "Try Again", onPress: () => { resetRecording(); resetAnalyze(); } }]
-      );
-    }
-  }, [analyzeStatus, result, error]);
-
-  const handleReset = () => {
-    resetRecording();
-    resetAnalyze();
-  };
-
-  const handleStopEarly = () => {
-    const elapsed_ms = elapsed * 1000;
-    if (elapsed_ms < MIN_DURATION_WARNING_MS) {
-      Alert.alert(
-        "Too Short",
-        `Please record for at least 50 seconds for an accurate reading. Current: ${elapsed}s`,
-        [
-          { text: "Keep Recording", style: "cancel" },
-          { text: "Stop Anyway", style: "destructive", onPress: stop },
-        ]
-      );
-    } else {
-      stop();
-    }
-  };
-
-  if (!permission || !micPermission) return <View style={styles.container} />;
-
-  if (!permission.granted || !micPermission.granted) {
-    const requestAll = async () => {
-      if (!permission.granted) await requestPermission();
-      if (!micPermission.granted) await requestMicPermission();
-    };
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.permissionContainer}>
-          <Text style={styles.permissionTitle}>Permissions Required</Text>
-          <Text style={styles.permissionSubtitle}>
-            Heart Rate Monitor needs camera and microphone access to record video for heart rate analysis.
-          </Text>
-          <TouchableOpacity style={styles.primaryButton} onPress={requestAll}>
-            <Text style={styles.primaryButtonText}>Grant Permissions</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  const isProcessing = analyzeStatus === "uploading" || analyzeStatus === "processing";
-  const countdown = Math.max(0, 60 - elapsed);
-  const progress = elapsed / 60;
 
   return (
-    <View style={styles.container}>
-      {/* Camera preview */}
-      <CameraView
-        ref={cameraRef}
-        style={StyleSheet.absoluteFillObject}
-        facing="front"
-        mode="video"
-      />
+    <SafeAreaView style={styles.safe}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
 
-      {/* Face guide oval */}
-      <View style={styles.ovalGuide} />
-
-      {/* Top instruction */}
-      {recordState === "idle" && (
-        <SafeAreaView style={styles.topOverlay}>
-          <View style={styles.instructionCard}>
-            <Text style={styles.instructionTitle}>Measure Heart Rate</Text>
-            <Text style={styles.instructionText}>
-              Position your face in the oval · Stay still · Ensure good lighting
+          {/* Header */}
+          <View style={styles.header}>
+            <View style={styles.heartIcon}>
+              <Text style={styles.heartEmoji}>♥</Text>
+            </View>
+            <Text style={styles.title}>Heart Rate Monitor</Text>
+            <Text style={styles.subtitle}>
+              Measure your heart rate using your phone's front camera
             </Text>
           </View>
-        </SafeAreaView>
-      )}
 
-      {/* Recording timer overlay */}
-      {recordState === "recording" && (
-        <SafeAreaView style={styles.topOverlay}>
-          <View style={styles.timerContainer}>
-            <View style={styles.recordingDot} />
-            <Text style={styles.timerText}>{countdown}s remaining</Text>
+          {/* How it works */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>How it works</Text>
+            <View style={styles.stepRow}>
+              <View style={styles.stepBadge}><Text style={styles.stepNum}>1</Text></View>
+              <Text style={styles.stepText}>Fill in your details below</Text>
+            </View>
+            <View style={styles.stepRow}>
+              <View style={styles.stepBadge}><Text style={styles.stepNum}>2</Text></View>
+              <Text style={styles.stepText}>Position your face in the oval guide</Text>
+            </View>
+            <View style={styles.stepRow}>
+              <View style={styles.stepBadge}><Text style={styles.stepNum}>3</Text></View>
+              <Text style={styles.stepText}>Stay still for 60 seconds while we scan</Text>
+            </View>
+            <View style={styles.stepRow}>
+              <View style={styles.stepBadge}><Text style={styles.stepNum}>4</Text></View>
+              <Text style={styles.stepText}>Get your heart rate result instantly</Text>
+            </View>
           </View>
-          {/* Progress arc (simple bar) */}
-          <View style={styles.progressBarBackground}>
-            <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
+
+          {/* Input form */}
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Before you scan</Text>
+
+            <Text style={styles.label}>Age <Text style={styles.required}>*</Text></Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your age"
+              placeholderTextColor="#555"
+              keyboardType="number-pad"
+              value={age}
+              onChangeText={setAge}
+              maxLength={3}
+              returnKeyType="next"
+            />
+
+            <Text style={styles.label}>Physical Activity</Text>
+            <Text style={styles.labelHint}>What were you doing before this scan?</Text>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="e.g. resting, just finished a 30 min walk, light stretching..."
+              placeholderTextColor="#555"
+              value={activity}
+              onChangeText={setActivity}
+              multiline
+              numberOfLines={3}
+              maxLength={200}
+              textAlignVertical="top"
+            />
+            <Text style={styles.charCount}>{activity.length}/200</Text>
           </View>
-        </SafeAreaView>
-      )}
 
-      {/* Error banner */}
-      {analyzeStatus === "error" && error && (
-        <SafeAreaView style={styles.bottomOverlay}>
-          <ErrorBanner message={error} onRetry={handleReset} />
-        </SafeAreaView>
-      )}
-
-      {/* Bottom controls */}
-      <SafeAreaView style={styles.bottomControls}>
-        {recordState === "idle" && analyzeStatus !== "error" && (
-          <TouchableOpacity style={styles.recordButton} onPress={start}>
-            <View style={styles.recordButtonInner} />
+          {/* Scan button */}
+          <TouchableOpacity
+            style={[styles.scanButton, !canScan && styles.scanButtonDisabled]}
+            onPress={handleStartScan}
+            disabled={!canScan}
+          >
+            <Text style={styles.scanButtonText}>Start Scan</Text>
           </TouchableOpacity>
-        )}
 
-        {recordState === "recording" && (
-          <TouchableOpacity style={styles.stopButton} onPress={handleStopEarly}>
-            <View style={styles.stopButtonInner} />
-          </TouchableOpacity>
-        )}
+          {!canScan && age.length > 0 && (
+            <Text style={styles.validationHint}>Please enter a valid age to continue</Text>
+          )}
 
-        {analyzeStatus === "error" && (
-          <TouchableOpacity style={styles.primaryButton} onPress={handleReset}>
-            <Text style={styles.primaryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        )}
-      </SafeAreaView>
+          <Text style={styles.disclaimer}>
+            Not a medical device. For informational use only.
+          </Text>
 
-      {/* Processing overlay — shown on top of everything */}
-      {isProcessing && (
-        <UploadProgress
-          status={analyzeStatus as "uploading" | "processing"}
-          uploadProgress={uploadProgress}
-        />
-      )}
-    </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#000",
+  safe: { flex: 1, backgroundColor: "#0a0a0a" },
+  container: { padding: 24, gap: 20, paddingBottom: 40 },
+  header: { alignItems: "center", gap: 12, paddingTop: 16 },
+  heartIcon: {
+    width: 72, height: 72, borderRadius: 36,
+    backgroundColor: "#FF4D6D22",
+    alignItems: "center", justifyContent: "center",
+    borderWidth: 1, borderColor: "#FF4D6D44",
   },
-  permissionContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 32,
-    gap: 16,
+  heartEmoji: { fontSize: 32 },
+  title: { color: "#fff", fontSize: 26, fontWeight: "800", textAlign: "center" },
+  subtitle: { color: "#888", fontSize: 14, textAlign: "center", lineHeight: 20 },
+  card: {
+    backgroundColor: "#141414",
+    borderRadius: 16,
+    padding: 20,
+    gap: 10,
   },
-  permissionTitle: {
+  cardTitle: { color: "#fff", fontSize: 16, fontWeight: "700", marginBottom: 4 },
+  stepRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  stepBadge: {
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: "#FF4D6D22", borderWidth: 1, borderColor: "#FF4D6D",
+    alignItems: "center", justifyContent: "center",
+  },
+  stepNum: { color: "#FF4D6D", fontSize: 13, fontWeight: "700" },
+  stepText: { color: "#bbb", fontSize: 14, flex: 1 },
+  label: { color: "#ccc", fontSize: 14, fontWeight: "600" },
+  labelHint: { color: "#666", fontSize: 12, marginTop: -6 },
+  required: { color: "#FF4D6D" },
+  input: {
+    backgroundColor: "#1e1e1e",
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#2a2a2a",
     color: "#fff",
-    fontSize: 22,
-    fontWeight: "700",
-    textAlign: "center",
-  },
-  permissionSubtitle: {
-    color: "#999",
     fontSize: 15,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  ovalGuide: {
-    position: "absolute",
-    top: "18%",
-    alignSelf: "center",
-    width: 200,
-    height: 270,
-    borderRadius: 100,
-    borderWidth: 2,
-    borderColor: "#FF4D6D88",
-    borderStyle: "dashed",
-  },
-  topOverlay: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    paddingTop: 8,
-  },
-  instructionCard: {
-    backgroundColor: "#0009",
-    borderRadius: 12,
-    paddingHorizontal: 20,
+    paddingHorizontal: 14,
     paddingVertical: 12,
-    margin: 16,
-    alignItems: "center",
-    gap: 4,
   },
-  instructionTitle: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  instructionText: {
-    color: "#ccc",
-    fontSize: 13,
-    textAlign: "center",
-  },
-  timerContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#0009",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    margin: 16,
-    gap: 8,
-  },
-  recordingDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  inputMultiline: { minHeight: 80, paddingTop: 12 },
+  charCount: { color: "#444", fontSize: 11, textAlign: "right", marginTop: -4 },
+  scanButton: {
     backgroundColor: "#FF4D6D",
-  },
-  timerText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  progressBarBackground: {
-    width: "80%",
-    height: 4,
-    backgroundColor: "#ffffff33",
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressBarFill: {
-    height: 4,
-    backgroundColor: "#FF4D6D",
-    borderRadius: 2,
-  },
-  bottomOverlay: {
-    position: "absolute",
-    bottom: 120,
-    left: 0,
-    right: 0,
-  },
-  bottomControls: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    paddingBottom: 40,
-  },
-  recordButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 4,
-    borderColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  recordButtonInner: {
-    width: 60,
-    height: 60,
+    paddingVertical: 18,
     borderRadius: 30,
-    backgroundColor: "#FF4D6D",
-  },
-  stopButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    borderWidth: 4,
-    borderColor: "#fff",
     alignItems: "center",
-    justifyContent: "center",
+    marginTop: 4,
   },
-  stopButtonInner: {
-    width: 30,
-    height: 30,
-    borderRadius: 4,
-    backgroundColor: "#fff",
-  },
-  primaryButton: {
-    backgroundColor: "#FF4D6D",
-    paddingHorizontal: 32,
-    paddingVertical: 14,
-    borderRadius: 30,
-  },
-  primaryButtonText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-  },
+  scanButtonDisabled: { backgroundColor: "#FF4D6D55" },
+  scanButtonText: { color: "#fff", fontSize: 18, fontWeight: "800", letterSpacing: 0.5 },
+  validationHint: { color: "#FF4D6D", fontSize: 13, textAlign: "center", marginTop: -12 },
+  disclaimer: { color: "#444", fontSize: 12, textAlign: "center" },
 });

@@ -14,11 +14,13 @@ import HeartRateDisplay from "../components/HeartRateDisplay";
 import WaveformChart from "../components/WaveformChart";
 
 export default function ResultScreen() {
-  const { bpm, confidence, waveform, waveform_fps } = useLocalSearchParams<{
+  const { bpm, confidence, waveform, waveform_fps, age, activity } = useLocalSearchParams<{
     bpm: string;
     confidence: string;
     waveform: string;
     waveform_fps: string;
+    age: string;
+    activity: string;
   }>();
 
   const bpmVal = parseFloat(bpm ?? "0");
@@ -36,9 +38,10 @@ export default function ResultScreen() {
           id: Date.now().toString(),
           bpm: bpmVal,
           confidence: confVal,
+          age: age ? parseInt(age) : null,
+          activity: activity || null,
           timestamp: new Date().toISOString(),
         });
-        // Keep last 50 readings
         await AsyncStorage.setItem("hr_history", JSON.stringify(history.slice(0, 50)));
       } catch {
         // Storage error is non-fatal
@@ -53,6 +56,14 @@ export default function ResultScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Context card */}
+        {(age || activity) && (
+          <View style={styles.contextCard}>
+            {age ? <Text style={styles.contextText}>Age: {age}</Text> : null}
+            {activity ? <Text style={styles.contextText}>Activity: {activity}</Text> : null}
+          </View>
+        )}
+
         {/* Heart Rate Display */}
         <HeartRateDisplay bpm={bpmVal} confidence={confVal} />
 
@@ -120,6 +131,17 @@ const styles = StyleSheet.create({
     padding: 24,
     gap: 20,
     alignItems: "center",
+  },
+  contextCard: {
+    width: "100%",
+    backgroundColor: "#141414",
+    borderRadius: 12,
+    padding: 14,
+    gap: 4,
+  },
+  contextText: {
+    color: "#888",
+    fontSize: 13,
   },
   categoryBadge: {
     borderWidth: 1,
