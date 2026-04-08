@@ -24,10 +24,12 @@ export function useAnalyze() {
       setResult(data);
       setStatus("done");
     } catch (err: any) {
-      const message =
-        err?.response?.data?.detail ??
-        err?.message ??
-        "An unexpected error occurred. Please try again.";
+      const isNetwork = !err?.response && (err?.code === "ECONNABORTED" || err?.message?.includes("Network") || err?.message?.includes("timeout"));
+      const message = isNetwork
+        ? "Connection failed. Check your internet connection and try again."
+        : err?.response?.data?.detail ??
+          err?.message ??
+          "An unexpected error occurred. Please try again.";
       setError(message);
       setStatus("error");
     }

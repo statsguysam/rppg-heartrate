@@ -3,7 +3,7 @@ import { BACKEND_URL } from "../constants/config";
 
 const client = axios.create({
   baseURL: BACKEND_URL,
-  timeout: 120_000, // 2 min — processing takes up to ~30s after upload
+  timeout: 300_000, // 5 min — processing takes up to ~30s after upload + upload time
   headers: { Accept: "application/json" },
 });
 

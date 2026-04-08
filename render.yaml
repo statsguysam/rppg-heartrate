@@ -2,7 +2,7 @@ services:
   - type: web
     name: rppg-heartrate-backend
     runtime: docker
-    dockerfilePath: ./backend/Dockerfile.cloud
+    dockerfilePath: ./Dockerfile.cloud
     dockerContext: ./backend
     plan: starter
     envVars:
