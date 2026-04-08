@@ -51,6 +51,7 @@ export default function ScanScreen() {
           stress: stress ?? "",
           caffeine: caffeine ?? "",
           medications: medications ?? "",
+          video_url: result.video_url ?? "",
         },
       });
       resetRecording();

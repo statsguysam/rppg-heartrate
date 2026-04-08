@@ -8,6 +8,7 @@ class AnalyzeResponse(BaseModel):
     waveform: list[float]       # ~300 points downsampled for display
     waveform_fps: int = 5       # points per second (for x-axis rendering)
     processing_time_ms: int
+    video_url: Optional[str] = None
     message: str = "success"
 
 

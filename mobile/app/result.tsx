@@ -15,9 +15,9 @@ import HeartRateDisplay from "../components/HeartRateDisplay";
 import WaveformChart from "../components/WaveformChart";
 
 export default function ResultScreen() {
-  const { bpm, confidence, waveform, waveform_fps, age, sex, activity, stress, caffeine, medications } = useLocalSearchParams<{
+  const { bpm, confidence, waveform, waveform_fps, age, sex, activity, stress, caffeine, medications, video_url } = useLocalSearchParams<{
     bpm: string; confidence: string; waveform: string; waveform_fps: string;
-    age: string; sex: string; activity: string; stress: string; caffeine: string; medications: string;
+    age: string; sex: string; activity: string; stress: string; caffeine: string; medications: string; video_url: string;
   }>();
 
   const bpmVal = parseFloat(bpm ?? "0");
@@ -60,6 +60,7 @@ export default function ResultScreen() {
       stress: stress || undefined,
       caffeine: caffeine || undefined,
       medications: medications || undefined,
+      video_url: video_url || undefined,
     });
   }, []);
 

@@ -13,6 +13,7 @@ export interface AnalyzeResult {
   waveform: number[];
   waveform_fps: number;
   processing_time_ms: number;
+  video_url?: string;
 }
 
 /**
@@ -52,6 +53,7 @@ export interface ScanRecord {
   stress?: string;
   caffeine?: string;
   medications?: string;
+  video_url?: string;
   device_id?: string;
 }
 
