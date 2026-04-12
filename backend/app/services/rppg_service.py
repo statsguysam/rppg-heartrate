@@ -82,20 +82,33 @@ def _trim_video(video_path: str, max_seconds: float = 65.0) -> str:
 
 
 def _run_physmamba(video_path: str) -> dict:
-    """Inference via open-rppg PhysMamba model."""
-    trimmed = _trim_video(video_path)
-    try:
-        result = _model.process_video(trimmed)
-    finally:
-        if trimmed != video_path:
-            import os
-            os.unlink(trimmed)
+    """
+    Inference via open-rppg PhysMamba model.
+    process_video handles rotation metadata and face detection internally.
+    Returns dict with bpm, raw_signal (BVP waveform), raw_prefilter, fps.
+    """
+    # process_video manages its own video decoding — no pre-trim needed
+    result = _model.process_video(video_path)
 
-    # open-rppg returns a dict with at minimum 'hr' (BPM)
+    if result is None or result.get("hr") is None:
+        raise RuntimeError(
+            "PhysMamba could not detect a heart rate. "
+            "Ensure the face is clearly visible and well-lit throughout the scan."
+        )
+
     bpm = float(result["hr"])
-    raw_signal: np.ndarray = np.array(result.get("ppg", []))
 
-    return {"bpm": bpm, "raw_signal": raw_signal, "fps": _model_fps}
+    # Retrieve BVP waveform (populated in model state after process_video)
+    try:
+        bvp_arr, _ = _model.bvp()
+        raw_signal = np.array(bvp_arr, dtype=np.float32) if len(bvp_arr) else np.array([])
+        # pre-filter = raw BVP before internal bandpass — use same signal, model already normalises
+        raw_prefilter = raw_signal.copy()
+    except Exception:
+        raw_signal = np.array([])
+        raw_prefilter = np.array([])
+
+    return {"bpm": bpm, "raw_signal": raw_signal, "raw_prefilter": raw_prefilter, "fps": _model.fps}
 
 
 def _run_chrom_fallback(video_path: str) -> dict:
