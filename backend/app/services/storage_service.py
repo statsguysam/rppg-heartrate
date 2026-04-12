@@ -60,10 +60,17 @@ async def upload_video(video_path: Path) -> str | None:
         trimmed_path = _trim_for_upload(video_path)
         upload_path = trimmed_path
 
+        file_size = upload_path.stat().st_size if upload_path.exists() else 0
+        file_size_mb = file_size / (1024 * 1024)
+
+        # Skip upload if still too large after trimming (mp4v codec is uncompressed)
+        if file_size_mb > 45:
+            logger.warning(f"Trimmed video still {file_size_mb:.1f}MB — too large for Supabase free tier, skipping upload.")
+            return None
+
         filename = f"{uuid.uuid4()}.mp4"
         url = f"{SUPABASE_URL}/storage/v1/object/{BUCKET}/{filename}"
-        file_size = upload_path.stat().st_size if upload_path.exists() else 0
-        logger.info(f"Uploading video {filename} ({file_size/1024/1024:.1f}MB) to Supabase...")
+        logger.info(f"Uploading video {filename} ({file_size_mb:.1f}MB) to Supabase...")
 
         async with httpx.AsyncClient(timeout=120) as client:
             with open(upload_path, "rb") as f:

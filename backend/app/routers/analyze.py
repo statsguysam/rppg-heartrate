@@ -39,10 +39,14 @@ async def analyze_video(video: UploadFile = File(...)):
         elapsed_ms = int(time.time() * 1000) - start_ms
         logger.info(f"Analysis complete: {bpm} BPM in {elapsed_ms}ms")
 
-        # 5. Upload video to Supabase Storage BEFORE cleanup
-        video_url = await storage_service.upload_video(video_path)
-        if video_url:
-            logger.info(f"Video uploaded: {video_url}")
+        # 5. Upload video to Supabase Storage BEFORE cleanup (best-effort, never blocks result)
+        try:
+            video_url = await storage_service.upload_video(video_path)
+            if video_url:
+                logger.info(f"Video uploaded: {video_url}")
+        except Exception as e:
+            logger.warning(f"Video upload skipped: {e}")
+            video_url = None
 
         return AnalyzeResponse(
             bpm=bpm,
