@@ -31,24 +31,37 @@ def validate_bpm(bpm: float) -> float:
 
 def estimate_confidence(waveform: np.ndarray, fps: float) -> float:
     """
-    Rough SNR-based confidence score [0, 1].
-    Computes the ratio of power at the dominant HR frequency to total power.
+    Multi-factor confidence score [0, 1].
+    Combines spectral SNR (power in HR band vs total) and peak sharpness
+    (how isolated the dominant frequency is vs its neighbours).
+    More signal (longer recording) → more reliable estimate.
     """
+    from scipy.signal import welch
+
     if len(waveform) < fps * 5:
         return 0.0
 
-    freqs = np.fft.rfftfreq(len(waveform), d=1.0 / fps)
-    power = np.abs(np.fft.rfft(waveform)) ** 2
+    # Use Welch for more stable PSD estimate
+    nperseg = max(64, min(int(fps * 10), len(waveform) // 2))
+    freqs, psd = welch(waveform, fs=fps, nperseg=nperseg, noverlap=nperseg // 2)
 
-    # Valid HR band: 0.7–4 Hz (42–240 BPM)
     hr_mask = (freqs >= 0.7) & (freqs <= 4.0)
-    total_power = power.sum()
-    hr_power = power[hr_mask].sum()
+    total_power = psd.sum()
+    hr_power = psd[hr_mask].sum()
 
     if total_power < 1e-12:
         return 0.0
 
+    # Factor 1: spectral concentration in HR band
     snr_ratio = hr_power / total_power
-    # Scale: SNR > 0.6 → high confidence; SNR < 0.2 → low confidence
-    confidence = float(np.clip((snr_ratio - 0.15) / 0.5, 0.0, 1.0))
+    snr_score = float(np.clip((snr_ratio - 0.15) / 0.5, 0.0, 1.0))
+
+    # Factor 2: peak sharpness — peak power vs mean HR-band power
+    hr_psd = psd[hr_mask]
+    peak_val = hr_psd.max()
+    mean_val = hr_psd.mean() + 1e-12
+    sharpness = float(np.clip((peak_val / mean_val - 1.5) / 8.0, 0.0, 1.0))
+
+    # Combine: SNR weighted more heavily, sharpness as secondary signal
+    confidence = float(np.clip(0.7 * snr_score + 0.3 * sharpness, 0.0, 1.0))
     return round(confidence, 2)

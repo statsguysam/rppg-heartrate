@@ -47,10 +47,10 @@ def _run_inference(video_path: str) -> dict:
         return _run_chrom_fallback(video_path)
 
 
-def _trim_video(video_path: str, max_seconds: float = 20.0) -> str:
+def _trim_video(video_path: str, max_seconds: float = 65.0) -> str:
     """
     If video is longer than max_seconds, write a trimmed copy and return its path.
-    30s of facial video is sufficient for accurate rPPG; trimming keeps CPU time <30s.
+    65s captures the full ~60s scan with margin; full-length video improves rPPG accuracy.
     """
     import cv2, tempfile, os
     cap = cv2.VideoCapture(video_path)
@@ -167,12 +167,13 @@ def _run_chrom_on_file(video_path: str) -> dict:
     alpha = Xf.std() / (Yf.std() + 1e-6)
     signal = Xf - alpha * Yf
 
-    # HR via FFT
-    N = len(signal)
-    freqs = fftfreq(N, d=1.0 / effective_fps)
-    power = np.abs(fft(signal)) ** 2
-    valid = (freqs >= 0.7) & (freqs <= 4.0)
-    peak_freq = freqs[valid][np.argmax(power[valid])]
+    # HR via Welch PSD — more robust than single FFT, especially with full 60s signal
+    from scipy.signal import welch
+    window_s = min(15.0, len(signal) / effective_fps * 0.5)
+    nperseg = max(64, int(window_s * effective_fps))
+    freqs_w, psd = welch(signal, fs=effective_fps, nperseg=nperseg, noverlap=nperseg // 2)
+    valid_w = (freqs_w >= 0.7) & (freqs_w <= 4.0)
+    peak_freq = freqs_w[valid_w][np.argmax(psd[valid_w])]
     bpm = float(peak_freq * 60)
 
     return {"bpm": bpm, "raw_signal": signal, "raw_prefilter": raw_signal_prefilter, "fps": effective_fps}

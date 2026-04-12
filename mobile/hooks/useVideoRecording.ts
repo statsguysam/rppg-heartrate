@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import { CameraView } from "expo-camera";
 import { Accelerometer } from "expo-sensors";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
 import { RECORDING_DURATION_MS } from "../constants/config";
 
 type RecordingState = "idle" | "recording" | "done";
@@ -52,6 +53,7 @@ export function useVideoRecording(
     isStableRef.current = true;
 
     startAccelerometer();
+    await activateKeepAwakeAsync();
 
     // Tick every second — only increment stableElapsed when stable
     intervalRef.current = setInterval(() => {
@@ -91,6 +93,7 @@ export function useVideoRecording(
     if (timerRef.current) clearTimeout(timerRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
     stopAccelerometer();
+    deactivateKeepAwake();
     cameraRef.current.stopRecording();
   }, [stopAccelerometer]);
 
@@ -99,6 +102,7 @@ export function useVideoRecording(
     setStableElapsed(0);
     setIsStable(true);
     stopAccelerometer();
+    deactivateKeepAwake();
   }, [stopAccelerometer]);
 
   // Cleanup on unmount
