@@ -81,14 +81,61 @@ def _trim_video(video_path: str, max_seconds: float = 65.0) -> str:
     return tmp.name
 
 
+def _reencode_keyframes(video_path: str) -> str:
+    """
+    Re-encode video to all-keyframes (intra-only) so PhysMamba can use every frame.
+    Phone H.264 video typically has only ~3% key frames; PhysMamba skips the rest.
+    Returns path to re-encoded file (temp); caller must delete if different from input.
+    """
+    import subprocess, tempfile, os
+    tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    tmp.close()
+    try:
+        result = subprocess.run(
+            [
+                "ffmpeg", "-y",
+                "-i", video_path,
+                "-vcodec", "libx264",
+                "-x264-params", "keyint=1:scenecut=0",  # every frame is a keyframe
+                "-crf", "18",          # near-lossless for signal quality
+                "-preset", "fast",
+                "-an",                 # drop audio — not needed for rPPG
+                tmp.name,
+            ],
+            capture_output=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            logger.warning(f"ffmpeg keyframe re-encode failed: {result.stderr[-200:].decode(errors='replace')}")
+            os.unlink(tmp.name)
+            return video_path  # fallback to original
+        logger.info(f"Re-encoded to all-keyframes: {tmp.name}")
+        return tmp.name
+    except (FileNotFoundError, subprocess.TimeoutExpired) as e:
+        logger.warning(f"ffmpeg not available for keyframe re-encode ({e}), using original.")
+        try:
+            os.unlink(tmp.name)
+        except Exception:
+            pass
+        return video_path
+
+
 def _run_physmamba(video_path: str) -> dict:
     """
     Inference via open-rppg PhysMamba model.
+    Re-encodes to all-keyframes first so PhysMamba uses every frame (not just ~3%).
     process_video handles rotation metadata and face detection internally.
-    Returns dict with bpm, raw_signal (BVP waveform), raw_prefilter, fps.
     """
-    # process_video manages its own video decoding — no pre-trim needed
-    result = _model.process_video(video_path)
+    reencoded = _reencode_keyframes(video_path)
+    try:
+        result = _model.process_video(reencoded)
+    finally:
+        if reencoded != video_path:
+            import os
+            try:
+                os.unlink(reencoded)
+            except Exception:
+                pass
 
     if result is None or result.get("hr") is None:
         raise RuntimeError(
