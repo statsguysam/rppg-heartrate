@@ -22,6 +22,7 @@ class ScanRecord(BaseModel):
     caffeine: Optional[str] = None
     medications: Optional[str] = None
     video_url: Optional[str] = None
+    comment: Optional[str] = None
     device_id: Optional[str] = None  # anonymous device identifier
 
 

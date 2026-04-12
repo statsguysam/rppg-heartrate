@@ -1,8 +1,12 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { CameraView } from "expo-camera";
+import { Accelerometer } from "expo-sensors";
 import { RECORDING_DURATION_MS } from "../constants/config";
 
 type RecordingState = "idle" | "recording" | "done";
+
+const STABLE_THRESHOLD = 0.08;   // max acceleration magnitude change to be "stable"
+const STABLE_REQUIRED_S = 60;    // need 60 stable seconds total
 
 export function useVideoRecording(
   onComplete: (uri: string) => void,
@@ -10,28 +14,65 @@ export function useVideoRecording(
 ) {
   const cameraRef = useRef<CameraView>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [state, setState] = useState<RecordingState>("idle");
-  const [elapsed, setElapsed] = useState(0); // seconds elapsed
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const accelSub = useRef<any>(null);
+  const isStableRef = useRef(true);
+  const lastAccel = useRef({ x: 0, y: 0, z: 0 });
+
+  const [state, setState] = useState<RecordingState>("idle");
+  const [stableElapsed, setStableElapsed] = useState(0);  // stable seconds counted
+  const [isStable, setIsStable] = useState(true);
+
+  // Accelerometer — track if user is moving too much
+  const startAccelerometer = useCallback(() => {
+    Accelerometer.setUpdateInterval(200);
+    accelSub.current = Accelerometer.addListener(({ x, y, z }) => {
+      const dx = Math.abs(x - lastAccel.current.x);
+      const dy = Math.abs(y - lastAccel.current.y);
+      const dz = Math.abs(z - lastAccel.current.z);
+      const magnitude = dx + dy + dz;
+      lastAccel.current = { x, y, z };
+
+      const stable = magnitude < STABLE_THRESHOLD;
+      isStableRef.current = stable;
+      setIsStable(stable);
+    });
+  }, []);
+
+  const stopAccelerometer = useCallback(() => {
+    accelSub.current?.remove();
+    accelSub.current = null;
+  }, []);
 
   const start = useCallback(async () => {
     if (!cameraRef.current || state !== "idle") return;
     setState("recording");
-    setElapsed(0);
+    setStableElapsed(0);
+    setIsStable(true);
+    isStableRef.current = true;
 
-    // Countdown ticker
+    startAccelerometer();
+
+    // Tick every second — only increment stableElapsed when stable
     intervalRef.current = setInterval(() => {
-      setElapsed((prev) => prev + 1);
+      if (isStableRef.current) {
+        setStableElapsed((prev) => {
+          const next = prev + 1;
+          if (next >= STABLE_REQUIRED_S) {
+            // Stop recording once we have 60 stable seconds
+            if (cameraRef.current) cameraRef.current.stopRecording();
+          }
+          return next;
+        });
+      }
     }, 1000);
 
-    // Auto-stop after 60s
+    // Hard cap: stop after 3 minutes regardless
     timerRef.current = setTimeout(async () => {
-      await stop();
-    }, RECORDING_DURATION_MS);
+      if (cameraRef.current) cameraRef.current.stopRecording();
+    }, 180_000);
 
-    // Record at 480p — keeps file ~6MB for 60s vs ~40MB at default 1080p
-    // 480p is sufficient for rPPG: we only need colour channel averages, not detail
-    cameraRef.current.recordAsync({ maxDuration: 65, videoQuality: "480p" }).then((result) => {
+    cameraRef.current.recordAsync({ maxDuration: 185, videoQuality: "480p" }).then((result) => {
       if (result?.uri) {
         onComplete(result.uri);
         setState("done");
@@ -43,22 +84,31 @@ export function useVideoRecording(
       setState("idle");
       onError?.(err?.message ?? "Recording failed. Please try again.");
     });
-  }, [state, onComplete]);
+  }, [state, onComplete, onError, startAccelerometer]);
 
   const stop = useCallback(async () => {
     if (!cameraRef.current) return;
-
     if (timerRef.current) clearTimeout(timerRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
-
+    stopAccelerometer();
     cameraRef.current.stopRecording();
-    // setState("done") is handled in the recordAsync promise above
-  }, []);
+  }, [stopAccelerometer]);
 
   const reset = useCallback(() => {
     setState("idle");
-    setElapsed(0);
-  }, []);
+    setStableElapsed(0);
+    setIsStable(true);
+    stopAccelerometer();
+  }, [stopAccelerometer]);
 
-  return { cameraRef, state, elapsed, start, stop, reset };
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      stopAccelerometer();
+    };
+  }, [stopAccelerometer]);
+
+  return { cameraRef, state, elapsed: stableElapsed, isStable, start, stop, reset };
 }

@@ -54,6 +54,7 @@ export interface ScanRecord {
   caffeine?: string;
   medications?: string;
   video_url?: string;
+  comment?: string;
   device_id?: string;
 }
 

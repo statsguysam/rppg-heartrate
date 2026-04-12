@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -20,11 +24,15 @@ export default function ResultScreen() {
     age: string; sex: string; activity: string; stress: string; caffeine: string; medications: string; video_url: string;
   }>();
 
+  const [comment, setComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   const bpmVal = parseFloat(bpm ?? "0");
   const confVal = parseFloat(confidence ?? "0");
   const waveformData: number[] = waveform ? JSON.parse(waveform) : [];
 
-  // Save reading to history
+  // Save to local history only on load
   useEffect(() => {
     if (!bpmVal) return;
     const save = async () => {
@@ -44,32 +52,41 @@ export default function ResultScreen() {
           timestamp: new Date().toISOString(),
         });
         await AsyncStorage.setItem("hr_history", JSON.stringify(history.slice(0, 50)));
-      } catch {
-        // Storage error is non-fatal
-      }
+      } catch { }
     };
     save();
-
-    // Save to remote database (non-fatal if fails)
-    saveScan({
-      bpm: bpmVal,
-      confidence: confVal,
-      age: age ? parseInt(age) : undefined,
-      sex: sex || undefined,
-      activity: activity || undefined,
-      stress: stress || undefined,
-      caffeine: caffeine || undefined,
-      medications: medications || undefined,
-      video_url: video_url || undefined,
-    });
   }, []);
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    try {
+      await saveScan({
+        bpm: bpmVal,
+        confidence: confVal,
+        age: age ? parseInt(age) : undefined,
+        sex: sex || undefined,
+        activity: activity || undefined,
+        stress: stress || undefined,
+        caffeine: caffeine || undefined,
+        medications: medications || undefined,
+        video_url: video_url || undefined,
+        comment: comment.trim() || undefined,
+      });
+      setSubmitted(true);
+    } catch {
+      Alert.alert("Error", "Failed to save. Please try again.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const bpmCategory = bpmVal < 60 ? "Bradycardia" : bpmVal > 100 ? "Tachycardia" : "Normal";
   const bpmCategoryColor = bpmVal < 60 || bpmVal > 100 ? "#FACC15" : "#4ADE80";
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {/* Context card */}
         {(age || sex || activity || stress || caffeine || medications) && (
           <View style={styles.contextCard}>
@@ -131,14 +148,47 @@ export default function ResultScreen() {
           </Text>
         </View>
 
-        {/* CTA */}
-        <TouchableOpacity
-          style={styles.measureAgainButton}
-          onPress={() => router.replace("/")}
-        >
-          <Text style={styles.measureAgainText}>Measure Again</Text>
-        </TouchableOpacity>
+        {/* Comment box */}
+        {!submitted ? (
+          <View style={styles.commentCard}>
+            <Text style={styles.commentTitle}>How do you feel?</Text>
+            <Text style={styles.commentHint}>Add any notes about how you're feeling, symptoms, or anything relevant.</Text>
+            <TextInput
+              style={styles.commentInput}
+              placeholder="e.g. Feeling relaxed, slight headache, just woke up..."
+              placeholderTextColor="#555"
+              value={comment}
+              onChangeText={setComment}
+              multiline
+              numberOfLines={3}
+              maxLength={300}
+              textAlignVertical="top"
+            />
+            <Text style={styles.charCount}>{comment.length}/300</Text>
+            <TouchableOpacity
+              style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+              onPress={handleSubmit}
+              disabled={submitting}
+            >
+              <Text style={styles.submitButtonText}>
+                {submitting ? "Saving..." : "Submit & Save"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.scanAgainOutline} onPress={() => router.replace("/")}>
+              <Text style={styles.scanAgainOutlineText}>Scan Again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.submittedCard}>
+            <Text style={styles.submittedIcon}>✓</Text>
+            <Text style={styles.submittedText}>Saved successfully!</Text>
+            <TouchableOpacity style={styles.measureAgainButton} onPress={() => router.replace("/")}>
+              <Text style={styles.measureAgainText}>Scan Again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -240,9 +290,37 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     marginBottom: 20,
   },
-  measureAgainText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
+  measureAgainText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  commentCard: {
+    width: "100%", backgroundColor: "#141414",
+    borderRadius: 16, padding: 20, gap: 10,
   },
+  commentTitle: { color: "#fff", fontSize: 16, fontWeight: "700" },
+  commentHint: { color: "#666", fontSize: 13, lineHeight: 18 },
+  commentInput: {
+    backgroundColor: "#1e1e1e", borderRadius: 10,
+    borderWidth: 1, borderColor: "#2a2a2a",
+    color: "#fff", fontSize: 14,
+    paddingHorizontal: 14, paddingVertical: 12,
+    minHeight: 90,
+  },
+  charCount: { color: "#444", fontSize: 11, textAlign: "right", marginTop: -4 },
+  submitButton: {
+    backgroundColor: "#FF4D6D", paddingVertical: 16,
+    borderRadius: 30, alignItems: "center",
+  },
+  submitButtonDisabled: { backgroundColor: "#FF4D6D55" },
+  submitButtonText: { color: "#fff", fontWeight: "700", fontSize: 16 },
+  scanAgainOutline: {
+    borderWidth: 1, borderColor: "#333",
+    paddingVertical: 14, borderRadius: 30, alignItems: "center",
+  },
+  scanAgainOutlineText: { color: "#888", fontWeight: "600", fontSize: 15 },
+  submittedCard: {
+    width: "100%", alignItems: "center", gap: 12,
+    backgroundColor: "#0d1a14", borderRadius: 16, padding: 24,
+    borderWidth: 1, borderColor: "#1a3a28", marginBottom: 20,
+  },
+  submittedIcon: { fontSize: 36, color: "#4ADE80" },
+  submittedText: { color: "#4ADE80", fontSize: 16, fontWeight: "700" },
 });

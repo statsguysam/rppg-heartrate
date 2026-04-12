@@ -33,7 +33,7 @@ export default function ScanScreen() {
     Alert.alert("Recording Failed", message, [{ text: "OK" }]);
   };
 
-  const { cameraRef, state: recordState, elapsed, start, stop, reset: resetRecording } =
+  const { cameraRef, state: recordState, elapsed, isStable, start, stop, reset: resetRecording } =
     useVideoRecording(handleRecordingComplete, handleRecordingError);
 
   useEffect(() => {
@@ -75,7 +75,7 @@ export default function ScanScreen() {
     if (elapsed_ms < MIN_DURATION_WARNING_MS) {
       Alert.alert(
         "Too Short",
-        `Please record for at least 50 seconds for an accurate reading. Current: ${elapsed}s`,
+        `Please record at least 50 stable seconds for an accurate reading. Current: ${elapsed}s stable`,
         [
           { text: "Keep Recording", style: "cancel" },
           { text: "Stop Anyway", style: "destructive", onPress: stop },
@@ -136,10 +136,17 @@ export default function ScanScreen() {
 
       {recordState === "recording" && (
         <SafeAreaView style={styles.topOverlay}>
-          <View style={styles.timerContainer}>
-            <View style={styles.recordingDot} />
-            <Text style={styles.timerText}>{countdown}s remaining</Text>
+          <View style={[styles.timerContainer, !isStable && styles.timerContainerMoving]}>
+            <View style={[styles.recordingDot, !isStable && styles.recordingDotMoving]} />
+            <Text style={styles.timerText}>
+              {isStable ? `${countdown}s remaining` : "Hold still! Timer paused"}
+            </Text>
           </View>
+          {!isStable && (
+            <View style={styles.motionWarning}>
+              <Text style={styles.motionWarningText}>⚠ Movement detected — stay still for accurate results</Text>
+            </View>
+          )}
           <View style={styles.progressBarBackground}>
             <View style={[styles.progressBarFill, { width: `${progress * 100}%` }]} />
           </View>
@@ -204,6 +211,13 @@ const styles = StyleSheet.create({
     borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8, margin: 16, gap: 8,
   },
   recordingDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#FF4D6D" },
+  recordingDotMoving: { backgroundColor: "#FACC15" },
+  timerContainerMoving: { borderWidth: 1, borderColor: "#FACC15" },
+  motionWarning: {
+    backgroundColor: "#FACC1522", borderRadius: 10, borderWidth: 1, borderColor: "#FACC1566",
+    paddingHorizontal: 14, paddingVertical: 6, marginHorizontal: 16,
+  },
+  motionWarningText: { color: "#FACC15", fontSize: 12, textAlign: "center" },
   timerText: { color: "#fff", fontSize: 16, fontWeight: "600" },
   progressBarBackground: { width: "80%", height: 4, backgroundColor: "#ffffff33", borderRadius: 2, overflow: "hidden" },
   progressBarFill: { height: 4, backgroundColor: "#FF4D6D", borderRadius: 2 },
