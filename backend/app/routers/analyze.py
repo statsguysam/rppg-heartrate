@@ -65,6 +65,16 @@ async def analyze_video(
             sbp=result.get("sbp"),
             dbp=result.get("dbp"),
             bp_confidence=result.get("bp_confidence"),
+            rmssd_ms=result.get("rmssd_ms"),
+            sdnn_ms=result.get("sdnn_ms"),
+            pnn50=result.get("pnn50"),
+            hrv_confidence=result.get("hrv_confidence"),
+            respiration_bpm=result.get("respiration_bpm"),
+            respiration_confidence=result.get("respiration_confidence"),
+            stress_score=result.get("stress_score"),
+            stress_label=result.get("stress_label"),
+            stress_lf_hf=result.get("stress_lf_hf"),
+            stress_confidence=result.get("stress_confidence"),
         )
 
     except HTTPException:

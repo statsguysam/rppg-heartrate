@@ -23,10 +23,16 @@ export default function ResultScreen() {
     bpm, confidence, waveform, waveform_fps,
     age, sex, activity, stress, caffeine, medications, video_url,
     sbp, dbp, bp_confidence,
+    rmssd_ms, sdnn_ms, pnn50, hrv_confidence,
+    respiration_bpm, respiration_confidence,
+    stress_score, stress_label, stress_lf_hf, stress_confidence,
   } = useLocalSearchParams<{
     bpm: string; confidence: string; waveform: string; waveform_fps: string;
     age: string; sex: string; activity: string; stress: string; caffeine: string; medications: string; video_url: string;
     sbp?: string; dbp?: string; bp_confidence?: string;
+    rmssd_ms?: string; sdnn_ms?: string; pnn50?: string; hrv_confidence?: string;
+    respiration_bpm?: string; respiration_confidence?: string;
+    stress_score?: string; stress_label?: string; stress_lf_hf?: string; stress_confidence?: string;
   }>();
 
   const [comment, setComment] = useState("");
@@ -40,6 +46,19 @@ export default function ResultScreen() {
   const sbpVal = sbp ? parseFloat(sbp) : null;
   const dbpVal = dbp ? parseFloat(dbp) : null;
   const bpConf = bp_confidence ? parseFloat(bp_confidence) : null;
+
+  const rmssdVal = rmssd_ms ? parseFloat(rmssd_ms) : null;
+  const sdnnVal = sdnn_ms ? parseFloat(sdnn_ms) : null;
+  const pnn50Val = pnn50 ? parseFloat(pnn50) : null;
+  const hrvConf = hrv_confidence ? parseFloat(hrv_confidence) : null;
+
+  const respVal = respiration_bpm ? parseFloat(respiration_bpm) : null;
+  const respConf = respiration_confidence ? parseFloat(respiration_confidence) : null;
+
+  const stressVal = stress_score ? parseInt(stress_score, 10) : null;
+  const stressLabel = stress_label || null;
+  const lfHfVal = stress_lf_hf ? parseFloat(stress_lf_hf) : null;
+  const stressConf = stress_confidence ? parseFloat(stress_confidence) : null;
 
   // Save to local history only on load
   useEffect(() => {
@@ -55,6 +74,12 @@ export default function ResultScreen() {
           sbp: sbpVal,
           dbp: dbpVal,
           bp_confidence: bpConf,
+          rmssd_ms: rmssdVal,
+          sdnn_ms: sdnnVal,
+          pnn50: pnn50Val,
+          respiration_bpm: respVal,
+          stress_score: stressVal,
+          stress_label: stressLabel,
           age: age ? parseInt(age) : null,
           sex: sex || null,
           activity: activity || null,
@@ -78,6 +103,16 @@ export default function ResultScreen() {
         sbp: sbpVal ?? undefined,
         dbp: dbpVal ?? undefined,
         bp_confidence: bpConf ?? undefined,
+        rmssd_ms: rmssdVal ?? undefined,
+        sdnn_ms: sdnnVal ?? undefined,
+        pnn50: pnn50Val ?? undefined,
+        hrv_confidence: hrvConf ?? undefined,
+        respiration_bpm: respVal ?? undefined,
+        respiration_confidence: respConf ?? undefined,
+        stress_score: stressVal ?? undefined,
+        stress_label: stressLabel ?? undefined,
+        stress_lf_hf: lfHfVal ?? undefined,
+        stress_confidence: stressConf ?? undefined,
         age: age ? parseInt(age) : undefined,
         sex: sex || undefined,
         activity: activity || undefined,
@@ -105,6 +140,21 @@ export default function ResultScreen() {
     if (sbpVal >= 130 || dbpVal >= 80) return { label: "High (Stage 1)", color: "#FACC15" };
     if (sbpVal >= 120) return { label: "Elevated", color: "#FACC15" };
     return { label: "Normal", color: "#4ADE80" };
+  })();
+
+  const respCategory = (() => {
+    if (respVal == null) return null;
+    if (respVal < 12) return { label: "Low", color: "#FACC15" };
+    if (respVal > 20) return { label: "Elevated", color: "#FACC15" };
+    return { label: "Normal", color: "#4ADE80" };
+  })();
+
+  const stressColor = (() => {
+    if (stressLabel === "Low") return "#4ADE80";
+    if (stressLabel === "Normal") return "#4ADE80";
+    if (stressLabel === "Elevated") return "#FACC15";
+    if (stressLabel === "High") return "#FB7185";
+    return "#888";
   })();
 
   return (
@@ -154,6 +204,86 @@ export default function ResultScreen() {
             {bpConf != null && (
               <Text style={styles.bpSubtle}>
                 Signal confidence {Math.round(bpConf * 100)}% · wellness estimate, not a medical measurement
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Respiration */}
+        {respVal != null && (
+          <View style={styles.metricCard}>
+            <Text style={styles.cardTitle}>Respiration Rate</Text>
+            <View style={styles.metricRow}>
+              <Text style={styles.metricNumber}>{Math.round(respVal)}</Text>
+              <Text style={styles.metricUnit}>breaths/min</Text>
+            </View>
+            {respCategory && (
+              <View style={[styles.bpBadge, { borderColor: respCategory.color }]}>
+                <Text style={[styles.bpBadgeText, { color: respCategory.color }]}>{respCategory.label}</Text>
+              </View>
+            )}
+            {respConf != null && (
+              <Text style={styles.bpSubtle}>
+                Signal confidence {Math.round(respConf * 100)}% · Normal adult range 12–20
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* Stress */}
+        {stressVal != null && stressLabel && (
+          <View style={styles.metricCard}>
+            <Text style={styles.cardTitle}>Stress Level</Text>
+            <View style={styles.metricRow}>
+              <Text style={[styles.metricNumber, { color: stressColor }]}>{stressVal}</Text>
+              <Text style={styles.metricUnit}>/ 100</Text>
+            </View>
+            <View style={[styles.bpBadge, { borderColor: stressColor }]}>
+              <Text style={[styles.bpBadgeText, { color: stressColor }]}>{stressLabel}</Text>
+            </View>
+            <View style={styles.hrvRow}>
+              {lfHfVal != null && (
+                <View style={styles.hrvItem}>
+                  <Text style={styles.hrvKey}>LF/HF</Text>
+                  <Text style={styles.hrvVal}>{lfHfVal.toFixed(2)}</Text>
+                </View>
+              )}
+            </View>
+            {stressConf != null && (
+              <Text style={styles.bpSubtle}>
+                Baevsky SI + LF/HF blend · confidence {Math.round(stressConf * 100)}%
+              </Text>
+            )}
+          </View>
+        )}
+
+        {/* HRV */}
+        {(rmssdVal != null || sdnnVal != null) && (
+          <View style={styles.metricCard}>
+            <Text style={styles.cardTitle}>Heart Rate Variability</Text>
+            <View style={styles.hrvRow}>
+              {rmssdVal != null && (
+                <View style={styles.hrvItem}>
+                  <Text style={styles.hrvKey}>RMSSD</Text>
+                  <Text style={styles.hrvVal}>{Math.round(rmssdVal)} ms</Text>
+                </View>
+              )}
+              {sdnnVal != null && (
+                <View style={styles.hrvItem}>
+                  <Text style={styles.hrvKey}>SDNN</Text>
+                  <Text style={styles.hrvVal}>{Math.round(sdnnVal)} ms</Text>
+                </View>
+              )}
+              {pnn50Val != null && (
+                <View style={styles.hrvItem}>
+                  <Text style={styles.hrvKey}>pNN50</Text>
+                  <Text style={styles.hrvVal}>{Math.round(pnn50Val * 100)}%</Text>
+                </View>
+              )}
+            </View>
+            {hrvConf != null && (
+              <Text style={styles.bpSubtle}>
+                Signal confidence {Math.round(hrvConf * 100)}% · Higher RMSSD usually reflects better recovery
               </Text>
             )}
           </View>
@@ -384,4 +514,15 @@ const styles = StyleSheet.create({
   },
   bpBadgeText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
   bpSubtle: { color: "#666", fontSize: 12, textAlign: "center", paddingHorizontal: 8 },
+  metricCard: {
+    width: "100%", backgroundColor: "#141414", borderRadius: 16,
+    padding: 20, gap: 8, alignItems: "center",
+  },
+  metricRow: { flexDirection: "row", alignItems: "baseline", gap: 8 },
+  metricNumber: { color: "#FF4D6D", fontSize: 40, fontWeight: "800", lineHeight: 44 },
+  metricUnit: { color: "#FF4D6D99", fontSize: 13, fontWeight: "600", letterSpacing: 1 },
+  hrvRow: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center", marginTop: 4 },
+  hrvItem: { alignItems: "center", minWidth: 72 },
+  hrvKey: { color: "#888", fontSize: 11, fontWeight: "600", letterSpacing: 0.5 },
+  hrvVal: { color: "#fff", fontSize: 16, fontWeight: "700", marginTop: 2 },
 });

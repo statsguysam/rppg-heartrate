@@ -21,7 +21,7 @@ from app.utils.signal_utils import (
     estimate_confidence,
     welch_hr,
 )
-from app.services import bp_service
+from app.services import bp_service, hrv_service, respiration_service, stress_service
 
 logger = logging.getLogger(__name__)
 
@@ -298,6 +298,43 @@ async def analyze_video(
     except Exception as e:
         logger.warning(f"BP estimation failed: {e}")
 
+    # HRV → Stress → Respiration. Each is best-effort and null-safe.
+    rmssd_ms = sdnn_ms = pnn50 = hrv_confidence = None
+    stress_score = stress_lf_hf = stress_confidence = None
+    stress_label = None
+    respiration_bpm = respiration_confidence = None
+    try:
+        hrv = hrv_service.extract_hrv(signal, fps)
+        if hrv is not None:
+            rmssd_ms = hrv.rmssd_ms
+            sdnn_ms = hrv.sdnn_ms
+            pnn50 = hrv.pnn50
+            hrv_confidence = hrv.confidence
+            logger.info(
+                f"HRV: RMSSD={rmssd_ms}ms SDNN={sdnn_ms}ms pNN50={pnn50} "
+                f"(n={hrv.n_beats}, conf={hrv_confidence})"
+            )
+            # Stress reuses the cleaned IBI list — avoids re-detecting beats.
+            try:
+                stress = stress_service.estimate_stress(hrv.ibis_ms)
+                if stress is not None:
+                    stress_score = stress.score
+                    stress_label = stress.label
+                    stress_lf_hf = stress.lf_hf_ratio
+                    stress_confidence = stress.confidence
+            except Exception as e:
+                logger.warning(f"Stress estimation failed: {e}")
+    except Exception as e:
+        logger.warning(f"HRV estimation failed: {e}")
+
+    try:
+        resp = respiration_service.estimate_respiration(signal, fps)
+        if resp is not None:
+            respiration_bpm = resp.rate_bpm
+            respiration_confidence = resp.confidence
+    except Exception as e:
+        logger.warning(f"Respiration estimation failed: {e}")
+
     return {
         "bpm": bpm,
         "confidence": confidence,
@@ -306,4 +343,14 @@ async def analyze_video(
         "sbp": sbp,
         "dbp": dbp,
         "bp_confidence": bp_confidence,
+        "rmssd_ms": rmssd_ms,
+        "sdnn_ms": sdnn_ms,
+        "pnn50": pnn50,
+        "hrv_confidence": hrv_confidence,
+        "respiration_bpm": respiration_bpm,
+        "respiration_confidence": respiration_confidence,
+        "stress_score": stress_score,
+        "stress_label": stress_label,
+        "stress_lf_hf": stress_lf_hf,
+        "stress_confidence": stress_confidence,
     }

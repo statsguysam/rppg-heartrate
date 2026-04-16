@@ -61,6 +61,16 @@ export default function ScanScreen() {
           sbp: result.sbp != null ? String(result.sbp) : "",
           dbp: result.dbp != null ? String(result.dbp) : "",
           bp_confidence: result.bp_confidence != null ? String(result.bp_confidence) : "",
+          rmssd_ms: result.rmssd_ms != null ? String(result.rmssd_ms) : "",
+          sdnn_ms: result.sdnn_ms != null ? String(result.sdnn_ms) : "",
+          pnn50: result.pnn50 != null ? String(result.pnn50) : "",
+          hrv_confidence: result.hrv_confidence != null ? String(result.hrv_confidence) : "",
+          respiration_bpm: result.respiration_bpm != null ? String(result.respiration_bpm) : "",
+          respiration_confidence: result.respiration_confidence != null ? String(result.respiration_confidence) : "",
+          stress_score: result.stress_score != null ? String(result.stress_score) : "",
+          stress_label: result.stress_label ?? "",
+          stress_lf_hf: result.stress_lf_hf != null ? String(result.stress_lf_hf) : "",
+          stress_confidence: result.stress_confidence != null ? String(result.stress_confidence) : "",
         },
       });
       resetRecording();

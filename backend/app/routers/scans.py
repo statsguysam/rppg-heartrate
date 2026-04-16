@@ -18,6 +18,16 @@ class ScanRecord(BaseModel):
     sbp: Optional[float] = None
     dbp: Optional[float] = None
     bp_confidence: Optional[float] = None
+    rmssd_ms: Optional[float] = None
+    sdnn_ms: Optional[float] = None
+    pnn50: Optional[float] = None
+    hrv_confidence: Optional[float] = None
+    respiration_bpm: Optional[float] = None
+    respiration_confidence: Optional[float] = None
+    stress_score: Optional[int] = None
+    stress_label: Optional[str] = None
+    stress_lf_hf: Optional[float] = None
+    stress_confidence: Optional[float] = None
     age: Optional[int] = None
     sex: Optional[str] = None
     activity: Optional[str] = None

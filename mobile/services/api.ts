@@ -17,6 +17,16 @@ export interface AnalyzeResult {
   sbp?: number | null;
   dbp?: number | null;
   bp_confidence?: number | null;  // 0–1
+  rmssd_ms?: number | null;
+  sdnn_ms?: number | null;
+  pnn50?: number | null;
+  hrv_confidence?: number | null;
+  respiration_bpm?: number | null;
+  respiration_confidence?: number | null;
+  stress_score?: number | null;          // 0–100
+  stress_label?: string | null;          // Low | Normal | Elevated | High
+  stress_lf_hf?: number | null;
+  stress_confidence?: number | null;
 }
 
 export interface Demographics {
@@ -62,6 +72,16 @@ export interface ScanRecord {
   sbp?: number;
   dbp?: number;
   bp_confidence?: number;
+  rmssd_ms?: number;
+  sdnn_ms?: number;
+  pnn50?: number;
+  hrv_confidence?: number;
+  respiration_bpm?: number;
+  respiration_confidence?: number;
+  stress_score?: number;
+  stress_label?: string;
+  stress_lf_hf?: number;
+  stress_confidence?: number;
   age?: number;
   sex?: string;
   activity?: string;
