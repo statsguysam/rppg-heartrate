@@ -25,14 +25,14 @@ export default function ResultScreen() {
     sbp, dbp, bp_confidence,
     rmssd_ms, sdnn_ms, pnn50, hrv_confidence,
     respiration_bpm, respiration_confidence,
-    stress_score, stress_label, stress_lf_hf, stress_confidence,
+    stress_score, stress_label, stress_baevsky_si, stress_confidence,
   } = useLocalSearchParams<{
     bpm: string; confidence: string; waveform: string; waveform_fps: string;
     age: string; sex: string; activity: string; stress: string; caffeine: string; medications: string; video_url: string;
     sbp?: string; dbp?: string; bp_confidence?: string;
     rmssd_ms?: string; sdnn_ms?: string; pnn50?: string; hrv_confidence?: string;
     respiration_bpm?: string; respiration_confidence?: string;
-    stress_score?: string; stress_label?: string; stress_lf_hf?: string; stress_confidence?: string;
+    stress_score?: string; stress_label?: string; stress_baevsky_si?: string; stress_confidence?: string;
   }>();
 
   const [comment, setComment] = useState("");
@@ -57,7 +57,7 @@ export default function ResultScreen() {
 
   const stressVal = stress_score ? parseInt(stress_score, 10) : null;
   const stressLabel = stress_label || null;
-  const lfHfVal = stress_lf_hf ? parseFloat(stress_lf_hf) : null;
+  const baevskyVal = stress_baevsky_si ? parseFloat(stress_baevsky_si) : null;
   const stressConf = stress_confidence ? parseFloat(stress_confidence) : null;
 
   // Save to local history only on load
@@ -111,7 +111,7 @@ export default function ResultScreen() {
         respiration_confidence: respConf ?? undefined,
         stress_score: stressVal ?? undefined,
         stress_label: stressLabel ?? undefined,
-        stress_lf_hf: lfHfVal ?? undefined,
+        stress_baevsky_si: baevskyVal ?? undefined,
         stress_confidence: stressConf ?? undefined,
         age: age ? parseInt(age) : undefined,
         sex: sex || undefined,
@@ -242,16 +242,16 @@ export default function ResultScreen() {
               <Text style={[styles.bpBadgeText, { color: stressColor }]}>{stressLabel}</Text>
             </View>
             <View style={styles.hrvRow}>
-              {lfHfVal != null && (
+              {baevskyVal != null && baevskyVal > 0 && (
                 <View style={styles.hrvItem}>
-                  <Text style={styles.hrvKey}>LF/HF</Text>
-                  <Text style={styles.hrvVal}>{lfHfVal.toFixed(2)}</Text>
+                  <Text style={styles.hrvKey}>Baevsky SI</Text>
+                  <Text style={styles.hrvVal}>{Math.round(baevskyVal)}</Text>
                 </View>
               )}
             </View>
             {stressConf != null && (
               <Text style={styles.bpSubtle}>
-                Baevsky SI + LF/HF blend · confidence {Math.round(stressConf * 100)}%
+                Baevsky SI + CVSD blend · confidence {Math.round(stressConf * 100)}%
               </Text>
             )}
           </View>

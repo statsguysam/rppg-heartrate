@@ -25,7 +25,7 @@ export interface AnalyzeResult {
   respiration_confidence?: number | null;
   stress_score?: number | null;          // 0–100
   stress_label?: string | null;          // Low | Normal | Elevated | High
-  stress_lf_hf?: number | null;
+  stress_baevsky_si?: number | null;     // Baevsky Stress Index (sympathetic drive)
   stress_confidence?: number | null;
 }
 
@@ -80,7 +80,7 @@ export interface ScanRecord {
   respiration_confidence?: number;
   stress_score?: number;
   stress_label?: string;
-  stress_lf_hf?: number;
+  stress_baevsky_si?: number;
   stress_confidence?: number;
   age?: number;
   sex?: string;

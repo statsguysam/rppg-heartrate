@@ -22,10 +22,12 @@ class AnalyzeResponse(BaseModel):
     # Respiration (breaths/min) via BW/AM/FM fusion.
     respiration_bpm: Optional[float] = None
     respiration_confidence: Optional[float] = None
-    # Stress — Baevsky SI + LF/HF blend. score: 0–100, label: Low|Normal|Elevated|High.
+    # Stress — Baevsky SI + CVSD time-domain blend (LF/HF requires ≥2 min RR,
+    # not reliable from 60 s per ESC Task Force 1996). score: 0–100,
+    # label: Low|Normal|Elevated|High.
     stress_score: Optional[int] = None
     stress_label: Optional[str] = None
-    stress_lf_hf: Optional[float] = None
+    stress_baevsky_si: Optional[float] = None
     stress_confidence: Optional[float] = None
     message: str = "success"
 

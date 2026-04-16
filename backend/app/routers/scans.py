@@ -26,7 +26,7 @@ class ScanRecord(BaseModel):
     respiration_confidence: Optional[float] = None
     stress_score: Optional[int] = None
     stress_label: Optional[str] = None
-    stress_lf_hf: Optional[float] = None
+    stress_baevsky_si: Optional[float] = None
     stress_confidence: Optional[float] = None
     age: Optional[int] = None
     sex: Optional[str] = None

@@ -73,7 +73,7 @@ async def analyze_video(
             respiration_confidence=result.get("respiration_confidence"),
             stress_score=result.get("stress_score"),
             stress_label=result.get("stress_label"),
-            stress_lf_hf=result.get("stress_lf_hf"),
+            stress_baevsky_si=result.get("stress_baevsky_si"),
             stress_confidence=result.get("stress_confidence"),
         )
 

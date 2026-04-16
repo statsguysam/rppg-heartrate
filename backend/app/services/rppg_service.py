@@ -300,7 +300,7 @@ async def analyze_video(
 
     # HRV → Stress → Respiration. Each is best-effort and null-safe.
     rmssd_ms = sdnn_ms = pnn50 = hrv_confidence = None
-    stress_score = stress_lf_hf = stress_confidence = None
+    stress_score = stress_baevsky_si = stress_confidence = None
     stress_label = None
     respiration_bpm = respiration_confidence = None
     try:
@@ -320,7 +320,7 @@ async def analyze_video(
                 if stress is not None:
                     stress_score = stress.score
                     stress_label = stress.label
-                    stress_lf_hf = stress.lf_hf_ratio
+                    stress_baevsky_si = stress.baevsky_si
                     stress_confidence = stress.confidence
             except Exception as e:
                 logger.warning(f"Stress estimation failed: {e}")
@@ -351,6 +351,6 @@ async def analyze_video(
         "respiration_confidence": respiration_confidence,
         "stress_score": stress_score,
         "stress_label": stress_label,
-        "stress_lf_hf": stress_lf_hf,
+        "stress_baevsky_si": stress_baevsky_si,
         "stress_confidence": stress_confidence,
     }

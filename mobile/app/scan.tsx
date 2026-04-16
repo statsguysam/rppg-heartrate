@@ -69,7 +69,7 @@ export default function ScanScreen() {
           respiration_confidence: result.respiration_confidence != null ? String(result.respiration_confidence) : "",
           stress_score: result.stress_score != null ? String(result.stress_score) : "",
           stress_label: result.stress_label ?? "",
-          stress_lf_hf: result.stress_lf_hf != null ? String(result.stress_lf_hf) : "",
+          stress_baevsky_si: result.stress_baevsky_si != null ? String(result.stress_baevsky_si) : "",
           stress_confidence: result.stress_confidence != null ? String(result.stress_confidence) : "",
         },
       });
