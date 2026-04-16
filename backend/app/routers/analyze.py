@@ -1,6 +1,7 @@
 import time
 import logging
-from fastapi import APIRouter, UploadFile, File, HTTPException
+from typing import Optional
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from app.models.schemas import AnalyzeResponse
 from app.services import video_service, rppg_service, storage_service
 from app.utils.signal_utils import validate_bpm
@@ -10,9 +11,15 @@ router = APIRouter()
 
 
 @router.post("/analyze", response_model=AnalyzeResponse)
-async def analyze_video(video: UploadFile = File(...)):
+async def analyze_video(
+    video: UploadFile = File(...),
+    age: Optional[int] = Form(None),
+    sex: Optional[str] = Form(None),
+    bmi: Optional[float] = Form(None),
+):
     """
-    Accept a ~1-minute face video and return estimated heart rate.
+    Accept a ~1-minute face video and return estimated heart rate + BP.
+    Demographics (age/sex/BMI) are optional and improve BP accuracy.
     Video is uploaded to Supabase Storage before cleanup.
     """
     if not video.filename or not video.filename.lower().endswith((".mp4", ".mov")):
@@ -31,7 +38,7 @@ async def analyze_video(video: UploadFile = File(...)):
         logger.info(f"Video valid: {duration_s:.1f}s @ {fps:.0f}fps")
 
         # 3. Run rPPG inference (runs in thread pool)
-        result = await rppg_service.analyze_video(video_path)
+        result = await rppg_service.analyze_video(video_path, age=age, sex=sex, bmi=bmi)
 
         # 4. Validate BPM
         bpm = validate_bpm(result["bpm"])
@@ -55,6 +62,9 @@ async def analyze_video(video: UploadFile = File(...)):
             waveform_fps=result["waveform_fps"],
             processing_time_ms=elapsed_ms,
             video_url=video_url,
+            sbp=result.get("sbp"),
+            dbp=result.get("dbp"),
+            bp_confidence=result.get("bp_confidence"),
         )
 
     except HTTPException:

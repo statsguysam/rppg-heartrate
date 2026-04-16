@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { analyzeVideo, AnalyzeResult } from "../services/api";
+import { analyzeVideo, AnalyzeResult, Demographics } from "../services/api";
 
 type Status = "idle" | "uploading" | "processing" | "done" | "error";
 
@@ -9,14 +9,14 @@ export function useAnalyze() {
   const [result, setResult] = useState<AnalyzeResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const analyze = useCallback(async (fileUri: string) => {
+  const analyze = useCallback(async (fileUri: string, demographics: Demographics = {}) => {
     setStatus("uploading");
     setUploadProgress(0);
     setError(null);
     setResult(null);
 
     try {
-      const data = await analyzeVideo(fileUri, (progress) => {
+      const data = await analyzeVideo(fileUri, demographics, (progress) => {
         setUploadProgress(progress);
         // Once upload is complete, switch to "processing" label
         if (progress >= 1.0) setStatus("processing");

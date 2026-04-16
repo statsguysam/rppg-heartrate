@@ -5,6 +5,8 @@ open-rppg is imported lazily and the model is warmed up at app startup
 via the lifespan handler in main.py. All inference happens synchronously
 in a thread pool executor to avoid blocking the async event loop.
 """
+from __future__ import annotations
+
 import asyncio
 import logging
 from pathlib import Path
@@ -18,6 +20,7 @@ from app.utils.signal_utils import (
     validate_bpm,
     estimate_confidence,
 )
+from app.services import bp_service
 
 logger = logging.getLogger(__name__)
 
@@ -239,10 +242,16 @@ def _run_chrom_on_file(video_path: str) -> dict:
     return {"bpm": bpm, "raw_signal": signal, "raw_prefilter": raw_signal_prefilter, "fps": effective_fps}
 
 
-async def analyze_video(video_path: Path) -> dict:
+async def analyze_video(
+    video_path: Path,
+    age: int | None = None,
+    sex: str | None = None,
+    bmi: float | None = None,
+) -> dict:
     """
     Async entry point: runs inference in a thread pool, then post-processes.
-    Returns dict with keys: bpm, confidence, waveform, waveform_fps.
+    Returns dict with keys: bpm, confidence, waveform, waveform_fps, sbp,
+    dbp, bp_confidence. BP fields are None if estimation fails.
     """
     loop = asyncio.get_event_loop()
     raw = await loop.run_in_executor(None, _run_inference, str(video_path))
@@ -261,9 +270,22 @@ async def analyze_video(video_path: Path) -> dict:
         confidence = 0.5
         waveform = []
 
+    # Blood pressure — best-effort. Never blocks the HR response.
+    sbp = dbp = bp_confidence = None
+    try:
+        bp = bp_service.estimate_bp(signal, fps, age=age, sex=sex, bmi=bmi)
+        if bp is not None:
+            sbp, dbp, bp_confidence = bp.sbp, bp.dbp, bp.confidence
+            logger.info(f"BP estimate: {sbp}/{dbp} mmHg (conf={bp_confidence}, n={bp.n_windows})")
+    except Exception as e:
+        logger.warning(f"BP estimation failed: {e}")
+
     return {
         "bpm": bpm,
         "confidence": confidence,
         "waveform": waveform,
         "waveform_fps": 5,
+        "sbp": sbp,
+        "dbp": dbp,
+        "bp_confidence": bp_confidence,
     }

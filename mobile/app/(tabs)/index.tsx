@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,7 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import { loadCalibration, isCalibrationStale, type BPCalibration } from "../../services/calibration";
 
 const SEX_OPTIONS = ["Male", "Female", "Other"];
 const STRESS_OPTIONS = ["Low", "Medium", "High"];
@@ -73,6 +74,17 @@ export default function HomeScreen() {
   const [stress, setStress] = useState("");
   const [caffeine, setCaffeine] = useState("");
   const [medications, setMedications] = useState("");
+  const [cal, setCal] = useState<BPCalibration | null>(null);
+
+  // Re-read calibration state every time the screen is focused so users see
+  // the banner flip to "Calibrated" immediately after they finish the flow.
+  useFocusEffect(
+    React.useCallback(() => {
+      loadCalibration().then(setCal);
+    }, [])
+  );
+
+  const calStale = isCalibrationStale(cal);
 
   const canScan = age.trim().length > 0 && parseInt(age) > 0 && parseInt(age) < 130;
 
@@ -109,6 +121,27 @@ export default function HomeScreen() {
               Measure your heart rate using your phone's front camera
             </Text>
           </View>
+
+          {/* BP calibration status — one-time setup unlocks BP on every future scan */}
+          <TouchableOpacity
+            style={[styles.bpBanner, !calStale && cal ? styles.bpBannerDone : styles.bpBannerPending]}
+            onPress={() => router.push("/calibrate")}
+          >
+            <Text style={styles.bpBannerIcon}>{!calStale && cal ? "✓" : "🩺"}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bpBannerTitle}>
+                {cal && !calStale ? "Blood Pressure: Calibrated" : cal ? "Re-calibrate Blood Pressure" : "Enable Blood Pressure"}
+              </Text>
+              <Text style={styles.bpBannerSubtitle}>
+                {cal && !calStale
+                  ? `Cuff ${cal.cuff_sbp}/${cal.cuff_dbp} · ${new Date(cal.calibrated_at).toLocaleDateString()}`
+                  : cal
+                  ? "Last calibration is over 14 days old — tap to refresh"
+                  : "One-time cuff pairing to show BP on every scan"}
+              </Text>
+            </View>
+            <Text style={styles.bpBannerChevron}>›</Text>
+          </TouchableOpacity>
 
           {/* Tips for accurate reading */}
           <View style={styles.tipsCard}>
@@ -319,4 +352,14 @@ const styles = StyleSheet.create({
   scanButtonText: { color: "#fff", fontSize: 18, fontWeight: "800", letterSpacing: 0.5 },
   validationHint: { color: "#FF4D6D", fontSize: 12, marginTop: -6 },
   disclaimer: { color: "#444", fontSize: 12, textAlign: "center", lineHeight: 18 },
+  bpBanner: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    borderRadius: 14, padding: 16, borderWidth: 1,
+  },
+  bpBannerPending: { backgroundColor: "#14141e", borderColor: "#2a2a3a" },
+  bpBannerDone: { backgroundColor: "#0d1a14", borderColor: "#1a3a28" },
+  bpBannerIcon: { fontSize: 20 },
+  bpBannerTitle: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  bpBannerSubtitle: { color: "#888", fontSize: 12, marginTop: 2 },
+  bpBannerChevron: { color: "#666", fontSize: 22, fontWeight: "300" },
 });

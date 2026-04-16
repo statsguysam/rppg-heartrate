@@ -14,15 +14,24 @@ export interface AnalyzeResult {
   waveform_fps: number;
   processing_time_ms: number;
   video_url?: string;
+  sbp?: number | null;            // uncalibrated SBP from the model
+  dbp?: number | null;            // uncalibrated DBP from the model
+  bp_confidence?: number | null;  // 0–1
+}
+
+export interface Demographics {
+  age?: number;
+  sex?: string;
+  bmi?: number;
 }
 
 /**
- * Upload a video file URI and return the heart rate analysis result.
- * @param fileUri - local file:// URI from expo-camera
- * @param onUploadProgress - optional callback for upload progress [0–1]
+ * Upload a video file URI and return the heart rate + BP analysis.
+ * Demographics are optional but improve BP accuracy.
  */
 export async function analyzeVideo(
   fileUri: string,
+  demographics: Demographics = {},
   onUploadProgress?: (progress: number) => void
 ): Promise<AnalyzeResult> {
   const formData = new FormData();
@@ -31,6 +40,9 @@ export async function analyzeVideo(
     type: "video/mp4",
     name: "face_scan.mp4",
   } as any);
+  if (demographics.age != null) formData.append("age", String(demographics.age));
+  if (demographics.sex) formData.append("sex", demographics.sex);
+  if (demographics.bmi != null) formData.append("bmi", String(demographics.bmi));
 
   const response = await client.post<AnalyzeResult>("/analyze", formData, {
     headers: { "Content-Type": "multipart/form-data" },
