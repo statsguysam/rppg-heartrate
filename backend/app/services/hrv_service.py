@@ -133,6 +133,22 @@ def extract_hrv(bvp: np.ndarray, fps: float) -> Optional[HRVResult]:
         logger.info(f"HRV rejected: only {len(clean)} clean IBIs (need ≥30)")
         return None
 
+    # Beat-coverage gate. Shaffer 2017 / Camm 1996 require ≥ 80 % clean beat
+    # coverage for short-term time-domain HRV to be trustworthy. A low
+    # coverage means the peak detector missed whole runs of beats and the
+    # ectopic filter has been deleting multi-beat gaps — the surviving IBIs
+    # are a biased remnant, not the true rhythm. Reject rather than report
+    # inflated RMSSD / CVSD (which would make stress look "Low" on a noisy
+    # signal).
+    total_s = len(sig) / TARGET_FPS
+    coverage = float(np.sum(clean) / 1000.0) / max(total_s, 1e-6)
+    if coverage < 0.80:
+        logger.info(
+            f"HRV rejected: beat coverage only {coverage:.0%} "
+            f"(n_clean={len(clean)}, mean_RR={np.mean(clean):.0f}ms, total={total_s:.0f}s)"
+        )
+        return None
+
     diffs = np.diff(clean)
     rmssd = float(np.sqrt(np.mean(diffs ** 2)))
     sdnn = float(np.std(clean, ddof=1))
