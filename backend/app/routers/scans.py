@@ -15,6 +15,9 @@ SUPABASE_KEY = os.getenv("SUPABASE_ANON_KEY", "")
 class ScanRecord(BaseModel):
     bpm: float
     confidence: float
+    sbp: Optional[float] = None
+    dbp: Optional[float] = None
+    bp_confidence: Optional[float] = None
     age: Optional[int] = None
     sex: Optional[str] = None
     activity: Optional[str] = None

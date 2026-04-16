@@ -19,6 +19,7 @@ from app.utils.signal_utils import (
     normalize_signal,
     validate_bpm,
     estimate_confidence,
+    welch_hr,
 )
 from app.services import bp_service
 
@@ -264,6 +265,23 @@ async def analyze_video(
 
     if len(signal) > 0:
         confidence = estimate_confidence(confidence_signal, fps)
+        # Independent HR cross-check from the BVP waveform. If the Welch
+        # peak agrees with the model's HR → strong boost (both sources
+        # agree). Big disagreement → knock confidence down, the primary
+        # estimate may be tracking noise.
+        welch_bpm = welch_hr(signal, fps)
+        if welch_bpm is not None:
+            delta = abs(welch_bpm - bpm)
+            if delta <= 3.0:
+                confidence = min(1.0, confidence + 0.10)
+            elif delta <= 5.0:
+                confidence = min(1.0, confidence + 0.05)
+            elif delta >= 10.0:
+                confidence = max(0.0, confidence - 0.15)
+            elif delta >= 6.0:
+                confidence = max(0.0, confidence - 0.05)
+            logger.info(f"HR cross-check: model={bpm:.1f} welch={welch_bpm:.1f} Δ={delta:.1f} → conf={confidence:.2f}")
+        confidence = round(confidence, 2)
         downsampled = downsample_waveform(signal, fps, to_fps=5)
         waveform = normalize_signal(downsampled).tolist()
     else:

@@ -34,14 +34,6 @@ export default function RootLayout() {
             presentation: "card",
           }}
         />
-        <Stack.Screen
-          name="calibrate"
-          options={{
-            title: "BP Calibration",
-            headerBackTitle: "Back",
-            presentation: "card",
-          }}
-        />
       </Stack>
     </>
   );

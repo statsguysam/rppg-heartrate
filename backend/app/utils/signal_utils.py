@@ -29,6 +29,30 @@ def validate_bpm(bpm: float) -> float:
     return round(bpm, 1)
 
 
+def welch_hr(waveform: np.ndarray, fps: float) -> float | None:
+    """
+    Estimate HR via Welch PSD peak in 0.7–4 Hz band. Returns BPM, or None
+    if signal is too short / noisy to give a clear peak. Used as an
+    independent cross-check against the primary model output.
+    """
+    from scipy.signal import welch
+
+    if fps <= 0 or len(waveform) < fps * 5:
+        return None
+
+    nperseg = max(64, min(int(fps * 10), len(waveform) // 2))
+    freqs, psd = welch(waveform, fs=fps, nperseg=nperseg, noverlap=nperseg // 2)
+    mask = (freqs >= 0.7) & (freqs <= 4.0)
+    if not mask.any():
+        return None
+    band_psd = psd[mask]
+    band_freqs = freqs[mask]
+    if band_psd.max() <= 0:
+        return None
+    peak_freq = float(band_freqs[int(np.argmax(band_psd))])
+    return round(peak_freq * 60.0, 1)
+
+
 def estimate_confidence(waveform: np.ndarray, fps: float) -> float:
     """
     Multi-factor confidence score [0, 1].

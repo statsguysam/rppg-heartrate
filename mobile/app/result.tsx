@@ -14,14 +14,6 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { saveScan } from "../services/api";
-import {
-  applyCalibration,
-  computeOffsets,
-  isCalibrationStale,
-  loadCalibration,
-  saveCalibration,
-  type BPCalibration,
-} from "../services/calibration";
 
 import HeartRateDisplay from "../components/HeartRateDisplay";
 import WaveformChart from "../components/WaveformChart";
@@ -31,27 +23,23 @@ export default function ResultScreen() {
     bpm, confidence, waveform, waveform_fps,
     age, sex, activity, stress, caffeine, medications, video_url,
     sbp, dbp, bp_confidence,
-    calibration, cuff_sbp, cuff_dbp, return_to,
   } = useLocalSearchParams<{
     bpm: string; confidence: string; waveform: string; waveform_fps: string;
     age: string; sex: string; activity: string; stress: string; caffeine: string; medications: string; video_url: string;
     sbp?: string; dbp?: string; bp_confidence?: string;
-    calibration?: string; cuff_sbp?: string; cuff_dbp?: string; return_to?: string;
   }>();
 
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [cal, setCal] = useState<BPCalibration | null>(null);
 
   const bpmVal = parseFloat(bpm ?? "0");
   const confVal = parseFloat(confidence ?? "0");
   const waveformData: number[] = waveform ? JSON.parse(waveform) : [];
 
-  const rawSbp = sbp ? parseFloat(sbp) : null;
-  const rawDbp = dbp ? parseFloat(dbp) : null;
+  const sbpVal = sbp ? parseFloat(sbp) : null;
+  const dbpVal = dbp ? parseFloat(dbp) : null;
   const bpConf = bp_confidence ? parseFloat(bp_confidence) : null;
-  const isCalibrationRun = calibration === "1" && cuff_sbp && cuff_dbp;
 
   // Save to local history only on load
   useEffect(() => {
@@ -64,6 +52,9 @@ export default function ResultScreen() {
           id: Date.now().toString(),
           bpm: bpmVal,
           confidence: confVal,
+          sbp: sbpVal,
+          dbp: dbpVal,
+          bp_confidence: bpConf,
           age: age ? parseInt(age) : null,
           sex: sex || null,
           activity: activity || null,
@@ -78,54 +69,15 @@ export default function ResultScreen() {
     save();
   }, []);
 
-  // Calibration pairing. If this scan came from the calibrate flow and the
-  // backend returned a raw BP estimate, compute & persist offsets, then
-  // bounce the user back where they came from.
-  useEffect(() => {
-    if (!isCalibrationRun || rawSbp == null || rawDbp == null) return;
-    const run = async () => {
-      const offsets = computeOffsets(
-        parseInt(cuff_sbp!, 10),
-        parseInt(cuff_dbp!, 10),
-        rawSbp,
-        rawDbp,
-      );
-      await saveCalibration(offsets);
-      Alert.alert(
-        "Calibration saved",
-        `Offset locked in: SBP ${offsets.sbp_offset >= 0 ? "+" : ""}${Math.round(offsets.sbp_offset)} / DBP ${offsets.dbp_offset >= 0 ? "+" : ""}${Math.round(offsets.dbp_offset)} mmHg. Future scans will use this.`,
-        [{ text: "OK", onPress: () => router.replace((return_to as any) || "/") }]
-      );
-    };
-    run();
-  }, [isCalibrationRun, rawSbp, rawDbp]);
-
-  // If the calibration scan itself failed to produce a BP estimate, tell
-  // the user clearly instead of silently losing the flow.
-  useEffect(() => {
-    if (!isCalibrationRun) return;
-    if (rawSbp != null && rawDbp != null) return;
-    Alert.alert(
-      "Calibration incomplete",
-      "We couldn't extract a clean pulse waveform from that scan. Try again in better lighting, staying very still.",
-      [{ text: "OK", onPress: () => router.replace("/calibrate") }]
-    );
-  }, [isCalibrationRun, rawSbp, rawDbp]);
-
-  // Load stored calibration once so we can display calibrated BP for normal scans.
-  useEffect(() => {
-    loadCalibration().then(setCal);
-  }, []);
-
-  const calibrated = applyCalibration(rawSbp, rawDbp, cal);
-  const calStale = isCalibrationStale(cal);
-
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
       await saveScan({
         bpm: bpmVal,
         confidence: confVal,
+        sbp: sbpVal ?? undefined,
+        dbp: dbpVal ?? undefined,
+        bp_confidence: bpConf ?? undefined,
         age: age ? parseInt(age) : undefined,
         sex: sex || undefined,
         activity: activity || undefined,
@@ -145,6 +97,15 @@ export default function ResultScreen() {
 
   const bpmCategory = bpmVal < 60 ? "Bradycardia" : bpmVal > 100 ? "Tachycardia" : "Normal";
   const bpmCategoryColor = bpmVal < 60 || bpmVal > 100 ? "#FACC15" : "#4ADE80";
+
+  const bpCategory = (() => {
+    if (sbpVal == null || dbpVal == null) return null;
+    if (sbpVal < 90 || dbpVal < 60) return { label: "Low", color: "#FACC15" };
+    if (sbpVal >= 140 || dbpVal >= 90) return { label: "High (Stage 2)", color: "#FB7185" };
+    if (sbpVal >= 130 || dbpVal >= 80) return { label: "High (Stage 1)", color: "#FACC15" };
+    if (sbpVal >= 120) return { label: "Elevated", color: "#FACC15" };
+    return { label: "Normal", color: "#4ADE80" };
+  })();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -175,38 +136,27 @@ export default function ResultScreen() {
           </Text>
         </View>
 
-        {/* Blood pressure — only shown once calibrated. Uncalibrated BP is
-            too noisy to display as a number; we nudge the user to calibrate. */}
-        {calibrated.sbp != null && calibrated.dbp != null && calibrated.calibrated && !isCalibrationRun && (
+        {/* Blood pressure */}
+        {sbpVal != null && dbpVal != null && (
           <View style={styles.bpCard}>
             <Text style={styles.cardTitle}>Blood Pressure</Text>
             <View style={styles.bpRow}>
-              <Text style={styles.bpNumber}>{calibrated.sbp}</Text>
+              <Text style={styles.bpNumber}>{Math.round(sbpVal)}</Text>
               <Text style={styles.bpSlash}>/</Text>
-              <Text style={styles.bpNumber}>{calibrated.dbp}</Text>
+              <Text style={styles.bpNumber}>{Math.round(dbpVal)}</Text>
               <Text style={styles.bpUnit}>mmHg</Text>
             </View>
+            {bpCategory && (
+              <View style={[styles.bpBadge, { borderColor: bpCategory.color }]}>
+                <Text style={[styles.bpBadgeText, { color: bpCategory.color }]}>{bpCategory.label}</Text>
+              </View>
+            )}
             {bpConf != null && (
               <Text style={styles.bpSubtle}>
                 Signal confidence {Math.round(bpConf * 100)}% · wellness estimate, not a medical measurement
               </Text>
             )}
-            {calStale && (
-              <TouchableOpacity style={styles.calRefresh} onPress={() => router.push("/calibrate")}>
-                <Text style={styles.calRefreshText}>⟳ Re-calibrate (last reading &gt; 14 days ago)</Text>
-              </TouchableOpacity>
-            )}
           </View>
-        )}
-
-        {/* Uncalibrated-but-have-model-output nudge */}
-        {rawSbp != null && rawDbp != null && !calibrated.calibrated && !isCalibrationRun && (
-          <TouchableOpacity style={styles.bpCalibratePrompt} onPress={() => router.push("/calibrate")}>
-            <Text style={styles.bpCalibratePromptTitle}>Enable Blood Pressure</Text>
-            <Text style={styles.bpCalibratePromptText}>
-              Calibrate once with a cuff reading to show your BP on future scans.
-            </Text>
-          </TouchableOpacity>
         )}
 
         {/* Reference ranges */}
@@ -428,13 +378,10 @@ const styles = StyleSheet.create({
   bpNumber: { color: "#FF4D6D", fontSize: 44, fontWeight: "800", lineHeight: 48 },
   bpSlash: { color: "#FF4D6D99", fontSize: 32, fontWeight: "700" },
   bpUnit: { color: "#FF4D6D99", fontSize: 13, fontWeight: "600", letterSpacing: 1, marginLeft: 6 },
-  bpSubtle: { color: "#666", fontSize: 12, textAlign: "center", paddingHorizontal: 8 },
-  calRefresh: { marginTop: 6 },
-  calRefreshText: { color: "#FACC15", fontSize: 12, fontWeight: "600" },
-  bpCalibratePrompt: {
-    width: "100%", backgroundColor: "#14141e", borderRadius: 14,
-    padding: 16, borderWidth: 1, borderColor: "#2a2a3a", gap: 4,
+  bpBadge: {
+    borderWidth: 1, borderRadius: 16,
+    paddingHorizontal: 12, paddingVertical: 4, marginTop: 4,
   },
-  bpCalibratePromptTitle: { color: "#FF4D6D", fontSize: 15, fontWeight: "700" },
-  bpCalibratePromptText: { color: "#aaa", fontSize: 13, lineHeight: 18 },
+  bpBadgeText: { fontSize: 12, fontWeight: "700", letterSpacing: 0.5 },
+  bpSubtle: { color: "#666", fontSize: 12, textAlign: "center", paddingHorizontal: 8 },
 });

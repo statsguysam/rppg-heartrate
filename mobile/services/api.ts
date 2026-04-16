@@ -14,8 +14,8 @@ export interface AnalyzeResult {
   waveform_fps: number;
   processing_time_ms: number;
   video_url?: string;
-  sbp?: number | null;            // uncalibrated SBP from the model
-  dbp?: number | null;            // uncalibrated DBP from the model
+  sbp?: number | null;
+  dbp?: number | null;
   bp_confidence?: number | null;  // 0–1
 }
 
@@ -59,6 +59,9 @@ export async function analyzeVideo(
 export interface ScanRecord {
   bpm: number;
   confidence: number;
+  sbp?: number;
+  dbp?: number;
+  bp_confidence?: number;
   age?: number;
   sex?: string;
   activity?: string;

@@ -17,11 +17,10 @@ import ErrorBanner from "../components/ErrorBanner";
 import { MIN_DURATION_WARNING_MS } from "../constants/config";
 
 export default function ScanScreen() {
-  const { age, sex, activity, stress, caffeine, medications, calibration, cuff_sbp, cuff_dbp, return_to } =
+  const { age, sex, activity, stress, caffeine, medications } =
     useLocalSearchParams<{
       age: string; sex: string; activity: string;
       stress: string; caffeine: string; medications: string;
-      calibration?: string; cuff_sbp?: string; cuff_dbp?: string; return_to?: string;
     }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
@@ -62,10 +61,6 @@ export default function ScanScreen() {
           sbp: result.sbp != null ? String(result.sbp) : "",
           dbp: result.dbp != null ? String(result.dbp) : "",
           bp_confidence: result.bp_confidence != null ? String(result.bp_confidence) : "",
-          calibration: calibration ?? "",
-          cuff_sbp: cuff_sbp ?? "",
-          cuff_dbp: cuff_dbp ?? "",
-          return_to: return_to ?? "",
         },
       });
       resetRecording();
