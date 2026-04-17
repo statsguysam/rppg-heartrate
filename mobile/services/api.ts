@@ -109,3 +109,19 @@ export async function checkHealth(): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Fire-and-forget warmup call on app launch. Render workers take up to
+ * ~2.5 min to load PhysMamba on cold boot; without a prompt the first
+ * /analyze can 502 against a not-yet-ready worker. We use a generous 90 s
+ * timeout so the request survives a full Render spin-up, and we ignore
+ * the result — the only purpose is to wake the instance so the model is
+ * ready by the time the user finishes recording.
+ */
+export async function warmupBackend(): Promise<void> {
+  try {
+    await client.get("/health", { timeout: 90_000 });
+  } catch {
+    // best-effort, never block UI
+  }
+}

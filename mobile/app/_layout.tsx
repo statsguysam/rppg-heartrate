@@ -1,7 +1,18 @@
+import { useEffect } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 
+import { warmupBackend } from "../services/api";
+
 export default function RootLayout() {
+  // Warm the Render worker on app launch. PhysMamba takes ~2 min per worker
+  // to load on cold boot; if the first /analyze hits a cold worker it gets a
+  // 502 from the proxy. A fire-and-forget /health ping gives the worker a
+  // head-start so the model is ready by the time the user finishes scanning.
+  useEffect(() => {
+    warmupBackend();
+  }, []);
+
   return (
     <>
       <StatusBar style="light" />
