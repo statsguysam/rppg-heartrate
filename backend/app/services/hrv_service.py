@@ -121,6 +121,26 @@ def _elgendi_terma_peaks(signal: np.ndarray, fs: float) -> np.ndarray:
     if in_block and (len(boi) - start) >= w1:
         peaks.append(start + int(np.argmax(w[start:])))
 
+    # Adaptive refractory pass — suppresses dicrotic-notch double-picks.
+    # Two true systolic peaks can never be closer than ~½·median(RR) because
+    # the dicrotic wave always falls in the first half of the cardiac cycle.
+    # With β tightened for rPPG SNR (α = 0.005·mean²), TERMA otherwise picks
+    # up the dicrotic wave as its own block — the ectopic filter then deletes
+    # BOTH the S→D and D→S IBIs, halving usable coverage.
+    # Floor: 300 ms (physiologic ceiling of 200 BPM) so the filter still
+    # applies when the initial peak list is too small to estimate a median.
+    if len(peaks) >= 3:
+        median_ibi = int(np.median(np.diff(peaks)))
+        min_gap = max(int(round(0.30 * fs)), int(0.5 * median_ibi))
+        merged = [peaks[0]]
+        for p in peaks[1:]:
+            if p - merged[-1] < min_gap:
+                if w[p] > w[merged[-1]]:
+                    merged[-1] = p   # keep the taller of the two — the true systole
+            else:
+                merged.append(p)
+        peaks = merged
+
     return np.array(peaks, dtype=np.int64)
 
 
