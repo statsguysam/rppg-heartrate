@@ -292,18 +292,41 @@ export default function ResultScreen() {
         {/* Reference ranges */}
         <View style={styles.infoCard}>
           <Text style={styles.cardTitle}>Reference Ranges</Text>
-          <View style={styles.rangeRow}>
-            <Text style={styles.rangeLabel}>Bradycardia</Text>
-            <Text style={styles.rangeValue}>&lt; 60 BPM</Text>
-          </View>
-          <View style={styles.rangeRow}>
-            <Text style={[styles.rangeLabel, { color: "#4ADE80" }]}>Normal</Text>
-            <Text style={[styles.rangeValue, { color: "#4ADE80" }]}>60–100 BPM</Text>
-          </View>
-          <View style={styles.rangeRow}>
-            <Text style={styles.rangeLabel}>Tachycardia</Text>
-            <Text style={styles.rangeValue}>&gt; 100 BPM</Text>
-          </View>
+
+          <Text style={styles.rangeGroupTitle}>Heart Rate (resting)</Text>
+          <View style={styles.rangeRow}><Text style={styles.rangeLabel}>Bradycardia</Text><Text style={styles.rangeValue}>&lt; 60 BPM</Text></View>
+          <View style={styles.rangeRow}><Text style={[styles.rangeLabel, { color: "#4ADE80" }]}>Normal</Text><Text style={[styles.rangeValue, { color: "#4ADE80" }]}>60–100 BPM</Text></View>
+          <View style={styles.rangeRow}><Text style={styles.rangeLabel}>Tachycardia</Text><Text style={styles.rangeValue}>&gt; 100 BPM</Text></View>
+
+          {sbpVal != null && (<>
+            <Text style={styles.rangeGroupTitle}>Blood Pressure (AHA 2017)</Text>
+            <View style={styles.rangeRow}><Text style={[styles.rangeLabel, { color: "#4ADE80" }]}>Normal</Text><Text style={[styles.rangeValue, { color: "#4ADE80" }]}>&lt; 120 / &lt; 80</Text></View>
+            <View style={styles.rangeRow}><Text style={styles.rangeLabel}>Elevated</Text><Text style={styles.rangeValue}>120–129 / &lt; 80</Text></View>
+            <View style={styles.rangeRow}><Text style={styles.rangeLabel}>Hypertension 1</Text><Text style={styles.rangeValue}>130–139 / 80–89</Text></View>
+            <View style={styles.rangeRow}><Text style={styles.rangeLabel}>Hypertension 2</Text><Text style={styles.rangeValue}>≥ 140 / ≥ 90</Text></View>
+          </>)}
+
+          {respVal != null && (<>
+            <Text style={styles.rangeGroupTitle}>Respiration Rate (adult)</Text>
+            <View style={styles.rangeRow}><Text style={styles.rangeLabel}>Low</Text><Text style={styles.rangeValue}>&lt; 12 /min</Text></View>
+            <View style={styles.rangeRow}><Text style={[styles.rangeLabel, { color: "#4ADE80" }]}>Normal</Text><Text style={[styles.rangeValue, { color: "#4ADE80" }]}>12–20 /min</Text></View>
+            <View style={styles.rangeRow}><Text style={styles.rangeLabel}>Elevated</Text><Text style={styles.rangeValue}>&gt; 20 /min</Text></View>
+          </>)}
+
+          {stressVal != null && (<>
+            <Text style={styles.rangeGroupTitle}>Stress Score (0–100)</Text>
+            <View style={styles.rangeRow}><Text style={[styles.rangeLabel, { color: "#4ADE80" }]}>Low</Text><Text style={[styles.rangeValue, { color: "#4ADE80" }]}>&lt; 30</Text></View>
+            <View style={styles.rangeRow}><Text style={[styles.rangeLabel, { color: "#4ADE80" }]}>Normal</Text><Text style={[styles.rangeValue, { color: "#4ADE80" }]}>30–54</Text></View>
+            <View style={styles.rangeRow}><Text style={[styles.rangeLabel, { color: "#FACC15" }]}>Elevated</Text><Text style={[styles.rangeValue, { color: "#FACC15" }]}>55–74</Text></View>
+            <View style={styles.rangeRow}><Text style={[styles.rangeLabel, { color: "#FB7185" }]}>High</Text><Text style={[styles.rangeValue, { color: "#FB7185" }]}>≥ 75</Text></View>
+          </>)}
+
+          {(rmssdVal != null || sdnnVal != null) && (<>
+            <Text style={styles.rangeGroupTitle}>HRV at rest (Shaffer 2017)</Text>
+            <View style={styles.rangeRow}><Text style={styles.rangeLabel}>RMSSD</Text><Text style={styles.rangeValue}>19–75 ms typical</Text></View>
+            <View style={styles.rangeRow}><Text style={styles.rangeLabel}>SDNN</Text><Text style={styles.rangeValue}>32–93 ms typical</Text></View>
+            <View style={styles.rangeRow}><Text style={styles.rangeLabel}>pNN50</Text><Text style={styles.rangeValue}>3–30 % typical</Text></View>
+          </>)}
         </View>
 
         {/* Waveform */}
@@ -525,4 +548,8 @@ const styles = StyleSheet.create({
   hrvItem: { alignItems: "center", minWidth: 72 },
   hrvKey: { color: "#888", fontSize: 11, fontWeight: "600", letterSpacing: 0.5 },
   hrvVal: { color: "#fff", fontSize: 16, fontWeight: "700", marginTop: 2 },
+  rangeGroupTitle: {
+    color: "#fff", fontSize: 13, fontWeight: "700",
+    marginTop: 10, marginBottom: 4, letterSpacing: 0.3,
+  },
 });

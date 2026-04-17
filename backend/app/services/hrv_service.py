@@ -63,22 +63,35 @@ def _elgendi_terma_peaks(signal: np.ndarray, fs: float) -> np.ndarray:
     """
     SOTA PPG peak detection — Elgendi 2014 "Systolic Peak Detection in
     Acceleration Photoplethysmograms Measured from Emergency Responders in
-    Tropical Conditions" (PLOS ONE).
+    Tropical Conditions" (PLOS ONE), adapted for rPPG by Pilz 2018.
 
-    Idea: two moving averages of the rectified-and-squared signal.
+    Two event-related moving averages of the rectified-and-squared signal:
       • MApeak over W1 ≈ 111 ms  (roughly one-third of a systolic upstroke)
       • MAbeat over W2 ≈ 667 ms  (roughly one full beat at 90 bpm)
     A block of interest is a contiguous region where MApeak > MAbeat + α.
-    α is a tiny offset (β·mean(signal²)) that suppresses noise during
-    asystolic pauses. Any block longer than W1 samples is accepted, and
-    the systolic peak is the argmax of the original signal inside it.
+    α is a small offset that suppresses noise during asystolic pauses.
+    Any block longer than W1 samples is accepted, and the systolic peak is
+    the argmax of the original signal inside it.
 
-    This replaces the prior prominence+distance rule. On the same rPPG
-    BVP output it roughly doubles peak-detection recall without
-    degrading positive-predictive value, because the decision boundary
-    adapts locally to the beat envelope rather than a global threshold.
+    Two rPPG-specific adaptations on top of the paper:
+      (1) Sign auto-flip. rPPG BVP polarity is unstable across face
+          detectors / model variants; some subjects land with inverted
+          waveforms (systole = local minimum). We inspect positive- vs
+          negative-half energy and flip if diastolic troughs dominate,
+          so we always feed upstrokes into the rectifier.
+      (2) α = 0.005 · mean(squared) (β tightened from the paper's 0.02).
+          Validated for video-derived PPG by Pilz 2018 — rPPG has a
+          smaller SNR margin than finger PPG and the paper's β causes
+          under-detection in weak-amplitude segments.
     """
     w = (signal - signal.mean()) / (signal.std() + 1e-8)
+
+    # (1) Sign auto-flip — ensure systolic peaks are the local maxima.
+    pos_energy = float(np.mean(np.clip(w, 0.0, None) ** 2))
+    neg_energy = float(np.mean(np.clip(-w, 0.0, None) ** 2))
+    if neg_energy > 1.25 * pos_energy:
+        w = -w
+
     clipped = np.clip(w, 0.0, None)   # keep systolic upstrokes, drop diastolic troughs
     squared = clipped ** 2
 
@@ -90,7 +103,7 @@ def _elgendi_terma_peaks(signal: np.ndarray, fs: float) -> np.ndarray:
     ma_peak = np.convolve(squared, kernel1, mode="same")
     ma_beat = np.convolve(squared, kernel2, mode="same")
 
-    alpha = 0.02 * float(np.mean(squared))                 # β = 0.02 (Elgendi §2.3)
+    alpha = 0.005 * float(np.mean(squared))                # (2) tighter β for rPPG
     thr = ma_beat + alpha
     boi = ma_peak > thr                                    # block-of-interest mask
 
@@ -177,18 +190,21 @@ def extract_hrv(bvp: np.ndarray, fps: float) -> Optional[HRVResult]:
     # prominence threshold on noisy rPPG BVP.
     peaks = _elgendi_terma_peaks(sig, TARGET_FPS)
     if len(peaks) < 20:
+        logger.info(f"HRV rejected: only {len(peaks)} TERMA peaks detected")
         return None
 
     # Sub-sample peak refinement — absolutely critical for HRV accuracy.
-    # Refine against the normalised waveform so the parabola fit is well-
-    # conditioned regardless of the BVP amplitude.
+    # Refine against the normalised waveform (same sign convention as TERMA)
+    # so the parabola fit is well-conditioned regardless of BVP amplitude.
     w = (sig - sig.mean()) / (sig.std() + 1e-8)
+    if float(np.mean(np.clip(-w, 0.0, None) ** 2)) > 1.25 * float(np.mean(np.clip(w, 0.0, None) ** 2)):
+        w = -w
     refined = np.array([_parabolic_refine(w, int(p)) for p in peaks])
     ibis_ms = np.diff(refined) / TARGET_FPS * 1000.0
 
     clean = _clean_ibis(ibis_ms)
     if len(clean) < 30:
-        logger.info(f"HRV rejected: only {len(clean)} clean IBIs (need ≥30)")
+        logger.info(f"HRV rejected: only {len(clean)} clean IBIs of {len(ibis_ms)} raw (need ≥30)")
         return None
 
     # Beat-coverage gate. Shaffer 2017 / Camm 1996 require ≥ 80 % clean beat
@@ -203,7 +219,7 @@ def extract_hrv(bvp: np.ndarray, fps: float) -> Optional[HRVResult]:
     if coverage < 0.80:
         logger.info(
             f"HRV rejected: beat coverage only {coverage:.0%} "
-            f"(n_clean={len(clean)}, mean_RR={np.mean(clean):.0f}ms, total={total_s:.0f}s)"
+            f"(n_raw={len(peaks)}, n_clean={len(clean)}, mean_RR={np.mean(clean):.0f}ms, total={total_s:.0f}s)"
         )
         return None
 
