@@ -17,6 +17,18 @@ import { saveScan } from "../services/api";
 
 import HeartRateDisplay from "../components/HeartRateDisplay";
 import WaveformChart from "../components/WaveformChart";
+import TrendChart from "../components/TrendChart";
+
+interface HistoryEntry {
+  id: string;
+  timestamp: string;
+  bpm?: number | null;
+  sbp?: number | null;
+  dbp?: number | null;
+  rmssd_ms?: number | null;
+  respiration_bpm?: number | null;
+  stress_score?: number | null;
+}
 
 export default function ResultScreen() {
   const {
@@ -38,6 +50,7 @@ export default function ResultScreen() {
   const [comment, setComment] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [recent, setRecent] = useState<HistoryEntry[]>([]);
 
   const bpmVal = parseFloat(bpm ?? "0");
   const confVal = parseFloat(confidence ?? "0");
@@ -88,7 +101,10 @@ export default function ResultScreen() {
           medications: medications || null,
           timestamp: new Date().toISOString(),
         });
-        await AsyncStorage.setItem("hr_history", JSON.stringify(history.slice(0, 50)));
+        const trimmed = history.slice(0, 50);
+        await AsyncStorage.setItem("hr_history", JSON.stringify(trimmed));
+        // Chronological order (oldest → newest) for the trend chart
+        setRecent(trimmed.slice(0, 5).reverse());
       } catch { }
     };
     save();
@@ -185,6 +201,57 @@ export default function ResultScreen() {
             {bpmCategory} Range
           </Text>
         </View>
+
+        {/* Recent trends — last 5 scans (including this one) */}
+        {recent.length >= 2 && (() => {
+          const bpmSeries = recent.map((r) => r.bpm ?? null);
+          const sbpSeries = recent.map((r) => r.sbp ?? null);
+          const dbpSeries = recent.map((r) => r.dbp ?? null);
+          const respSeries = recent.map((r) => r.respiration_bpm ?? null);
+          const stressSeries = recent.map((r) => r.stress_score ?? null);
+          const rmssdSeries = recent.map((r) => r.rmssd_ms ?? null);
+
+          const count = (s: (number | null)[]) => s.filter((v) => v != null).length;
+
+          const show = {
+            bpm: count(bpmSeries) >= 2,
+            bp: count(sbpSeries) >= 2 && count(dbpSeries) >= 2,
+            resp: count(respSeries) >= 2,
+            stress: count(stressSeries) >= 2,
+            rmssd: count(rmssdSeries) >= 2,
+          };
+
+          if (!show.bpm && !show.bp && !show.resp && !show.stress && !show.rmssd) return null;
+
+          return (
+            <View style={styles.infoCard}>
+              <Text style={styles.cardTitle}>Recent Trends</Text>
+              <Text style={styles.cardSubtitle}>
+                Last {recent.length} scan{recent.length > 1 ? "s" : ""} · oldest → newest
+              </Text>
+              <View style={styles.trendsList}>
+                {show.bpm && (
+                  <TrendChart label="Heart Rate" unit="BPM" values={bpmSeries} color="#FF4D6D" />
+                )}
+                {show.bp && (
+                  <>
+                    <TrendChart label="Systolic BP" unit="mmHg" values={sbpSeries} color="#60A5FA" />
+                    <TrendChart label="Diastolic BP" unit="mmHg" values={dbpSeries} color="#60A5FA" />
+                  </>
+                )}
+                {show.resp && (
+                  <TrendChart label="Respiration" unit="br/min" values={respSeries} color="#34D399" />
+                )}
+                {show.stress && (
+                  <TrendChart label="Stress Score" unit="/ 100" values={stressSeries} color="#FACC15" />
+                )}
+                {show.rmssd && (
+                  <TrendChart label="HRV (RMSSD)" unit="ms" values={rmssdSeries} color="#A78BFA" />
+                )}
+              </View>
+            </View>
+          );
+        })()}
 
         {/* Blood pressure */}
         {sbpVal != null && dbpVal != null && (
@@ -552,4 +619,5 @@ const styles = StyleSheet.create({
     color: "#fff", fontSize: 13, fontWeight: "700",
     marginTop: 10, marginBottom: 4, letterSpacing: 0.3,
   },
+  trendsList: { gap: 14, marginTop: 4 },
 });
