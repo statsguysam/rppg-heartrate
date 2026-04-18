@@ -190,33 +190,53 @@ def _parabolic_refine(y: np.ndarray, idx: int) -> float:
     return float(idx) + delta
 
 
-def _clean_ibis(ibis_ms: np.ndarray) -> np.ndarray:
-    """Three-stage ectopic filter. Returns IBIs that survive all three."""
+def _clean_ibis(ibis_ms: np.ndarray) -> tuple[np.ndarray, dict]:
+    """
+    Three-stage ectopic filter tuned for 60 s rPPG scans.
+
+    Returns the surviving IBI array plus a per-stage drop-count dict for
+    diagnostic logging — the dominant failure mode in production has been
+    over-aggressive ectopic filtering, and per-stage counts make it visible.
+
+    Stages:
+      1. Physiologic range 400–1300 ms (HR 46–150)
+      2. Global outlier vs mean (±40 % band)
+      3. Berntson–Stowell consecutive-difference rule (Berntson 1990,
+         Stowell 1998): drop IBI[i] when |IBI[i] − IBI[i-1]| > 30 %.
+         This replaces the rolling-mean local filter, which was lifted
+         from 5-min HRV literature and over-fits on a 60-beat scan
+         (a single missed beat shifts the 10-beat window enough to drag
+         neighbouring valid IBIs over the 20 % band, killing 30 %+ of
+         good beats). The consecutive rule is the standard short-record
+         ectopic detector and depends only on local biology, not window
+         statistics.
+    """
+    diag = {"raw": len(ibis_ms), "after_physio": 0, "after_global": 0, "after_consec": 0}
     if len(ibis_ms) == 0:
-        return ibis_ms
+        return ibis_ms, diag
 
     # Stage 1: absolute physiologic range
     mask = (ibis_ms >= 400.0) & (ibis_ms <= 1300.0)
+    diag["after_physio"] = int(mask.sum())
     if mask.sum() < 3:
-        return ibis_ms[mask]
+        return ibis_ms[mask], diag
 
-    # Stage 2: global outlier vs mean (40% band)
+    # Stage 2: global outlier vs mean (40 % band)
     mean_all = float(np.mean(ibis_ms[mask]))
     mask &= np.abs(ibis_ms - mean_all) <= 0.40 * mean_all
+    diag["after_global"] = int(mask.sum())
     if mask.sum() < 3:
-        return ibis_ms[mask]
+        return ibis_ms[mask], diag
 
-    # Stage 3: local outlier vs rolling mean (window 10, 20% band)
+    # Stage 3: Berntson–Stowell consecutive-difference rule.
     kept = ibis_ms[mask].copy()
-    keep_local = np.ones(len(kept), dtype=bool)
-    win = 10
-    for i in range(len(kept)):
-        lo = max(0, i - win // 2)
-        hi = min(len(kept), i + win // 2 + 1)
-        window_mean = float(np.mean(kept[lo:hi]))
-        if abs(kept[i] - window_mean) > 0.20 * window_mean:
-            keep_local[i] = False
-    return kept[keep_local]
+    keep_consec = np.ones(len(kept), dtype=bool)
+    for i in range(1, len(kept)):
+        if abs(kept[i] - kept[i - 1]) > 0.30 * kept[i - 1]:
+            keep_consec[i] = False
+    out = kept[keep_consec]
+    diag["after_consec"] = int(len(out))
+    return out, diag
 
 
 def extract_hrv(
@@ -253,24 +273,38 @@ def extract_hrv(
     refined = np.array([_parabolic_refine(w, int(p)) for p in peaks])
     ibis_ms = np.diff(refined) / TARGET_FPS * 1000.0
 
-    clean = _clean_ibis(ibis_ms)
+    clean, diag = _clean_ibis(ibis_ms)
     if len(clean) < 30:
-        logger.info(f"HRV rejected: only {len(clean)} clean IBIs of {len(ibis_ms)} raw (need ≥30)")
+        logger.info(
+            f"HRV rejected: only {len(clean)} clean IBIs (need ≥30). "
+            f"Stages: raw={diag['raw']} →physio={diag['after_physio']} "
+            f"→global={diag['after_global']} →consec={diag['after_consec']}"
+        )
         return None
 
-    # Beat-coverage gate. Shaffer 2017 / Camm 1996 require ≥ 80 % clean beat
-    # coverage for short-term time-domain HRV to be trustworthy. A low
-    # coverage means the peak detector missed whole runs of beats and the
-    # ectopic filter has been deleting multi-beat gaps — the surviving IBIs
-    # are a biased remnant, not the true rhythm. Reject rather than report
-    # inflated RMSSD / CVSD (which would make stress look "Low" on a noisy
-    # signal).
+    # Beat-coverage gate. Shaffer 2017 / Camm 1996 require ≥ 80 % beat
+    # coverage for short-term time-domain HRV to be trustworthy.
+    #
+    # Coverage is defined as (peaks_detected / beats_expected). The expected
+    # beat count derives from the clean median RR over the scan duration —
+    # i.e. "given the rhythm we observed, did the detector find every
+    # systole?". This replaces an earlier formulation that summed clean IBIs
+    # over total_s, which double-penalised every missed beat: one miss
+    # produces a 2× IBI that fails the 1300 ms physiologic ceiling, costing
+    # twice the missed-beat duration in coverage and rejecting otherwise
+    # well-tracked rhythms. The peak-count form measures detection coverage
+    # directly and does not punish a clean filter for nuking spurious doubles.
     total_s = len(sig) / TARGET_FPS
-    coverage = float(np.sum(clean) / 1000.0) / max(total_s, 1e-6)
+    median_rr_ms = float(np.median(clean))
+    expected_beats = total_s * 1000.0 / max(median_rr_ms, 1e-6)
+    coverage = len(peaks) / max(expected_beats, 1.0)
     if coverage < 0.80:
         logger.info(
             f"HRV rejected: beat coverage only {coverage:.0%} "
-            f"(n_raw={len(peaks)}, n_clean={len(clean)}, mean_RR={np.mean(clean):.0f}ms, total={total_s:.0f}s)"
+            f"(n_raw={len(peaks)}, n_clean={len(clean)}, mean_RR={np.mean(clean):.0f}ms, "
+            f"expected={expected_beats:.0f}, total={total_s:.0f}s) "
+            f"Stages: raw={diag['raw']} →physio={diag['after_physio']} "
+            f"→global={diag['after_global']} →consec={diag['after_consec']}"
         )
         return None
 
