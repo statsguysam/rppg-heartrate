@@ -97,8 +97,21 @@ def _elgendi_terma_peaks(
     clipped = np.clip(w, 0.0, None)   # keep systolic upstrokes, drop diastolic troughs
     squared = clipped ** 2
 
-    w1 = max(int(round(0.111 * fs)), 1)                    # peak window ≈ 111 ms
-    w2 = max(int(round(0.667 * fs)), w1 + 1)               # beat window ≈ 667 ms
+    # Window sizing — Elgendi 2014 defaults are W1=111ms, W2=667ms (calibrated
+    # at ~90 BPM). For slow HR these are too short: ma_beat smooths less than a
+    # full cycle, so the threshold sits too high and TERMA misses systoles.
+    # When an HR prior is available, scale to the actual cycle length:
+    #   W1 ≈ 15 % of RR  (covers the systolic upstroke)
+    #   W2 ≈ one full RR (covers a complete beat — paper's intent)
+    # Paper defaults are kept as a floor so fast-HR scans are unaffected.
+    if hr_prior_bpm is not None and 30.0 <= float(hr_prior_bpm) <= 200.0:
+        rr_prior_s = 60.0 / float(hr_prior_bpm)
+        w1_s = max(0.111, 0.15 * rr_prior_s)
+        w2_s = max(0.667, rr_prior_s)
+    else:
+        w1_s, w2_s = 0.111, 0.667
+    w1 = max(int(round(w1_s * fs)), 1)
+    w2 = max(int(round(w2_s * fs)), w1 + 1)
 
     kernel1 = np.ones(w1) / w1
     kernel2 = np.ones(w2) / w2
