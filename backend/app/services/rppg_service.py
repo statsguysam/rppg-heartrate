@@ -304,7 +304,9 @@ async def analyze_video(
     stress_label = None
     respiration_bpm = respiration_confidence = None
     try:
-        hrv = hrv_service.extract_hrv(signal, fps)
+        # Pass the validated HR as a prior — used by TERMA's refractory pass
+        # to reject dicrotic-notch double-picks based on the expected RR.
+        hrv = hrv_service.extract_hrv(signal, fps, hr_prior_bpm=bpm)
         if hrv is not None:
             rmssd_ms = hrv.rmssd_ms
             sdnn_ms = hrv.sdnn_ms

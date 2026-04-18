@@ -59,7 +59,9 @@ def _upsample(bvp: np.ndarray, fps: float) -> np.ndarray:
     return resample_poly(bvp, up // g, down // g)
 
 
-def _elgendi_terma_peaks(signal: np.ndarray, fs: float) -> np.ndarray:
+def _elgendi_terma_peaks(
+    signal: np.ndarray, fs: float, hr_prior_bpm: Optional[float] = None
+) -> np.ndarray:
     """
     SOTA PPG peak detection — Elgendi 2014 "Systolic Peak Detection in
     Acceleration Photoplethysmograms Measured from Emergency Responders in
@@ -122,16 +124,25 @@ def _elgendi_terma_peaks(signal: np.ndarray, fs: float) -> np.ndarray:
         peaks.append(start + int(np.argmax(w[start:])))
 
     # Adaptive refractory pass — suppresses dicrotic-notch double-picks.
-    # Two true systolic peaks can never be closer than ~½·median(RR) because
+    # Two true systolic peaks can never be closer than ~0.7·RR because
     # the dicrotic wave always falls in the first half of the cardiac cycle.
     # With β tightened for rPPG SNR (α = 0.005·mean²), TERMA otherwise picks
     # up the dicrotic wave as its own block — the ectopic filter then deletes
     # BOTH the S→D and D→S IBIs, halving usable coverage.
+    #
+    # When the caller passes an HR prior (Welch PSD on the same waveform), we
+    # use 0.7 × RR_prior as the refractory window — much more reliable than
+    # the median of the raw peak set, which is itself biased short by the
+    # very dicrotic detections we are trying to remove.
     # Floor: 300 ms (physiologic ceiling of 200 BPM) so the filter still
-    # applies when the initial peak list is too small to estimate a median.
+    # applies when the prior is missing or out of range.
     if len(peaks) >= 3:
-        median_ibi = int(np.median(np.diff(peaks)))
-        min_gap = max(int(round(0.30 * fs)), int(0.5 * median_ibi))
+        if hr_prior_bpm is not None and 30.0 <= float(hr_prior_bpm) <= 200.0:
+            rr_prior_samples = (60.0 / float(hr_prior_bpm)) * fs
+            min_gap = max(int(round(0.30 * fs)), int(round(0.70 * rr_prior_samples)))
+        else:
+            median_ibi = int(np.median(np.diff(peaks)))
+            min_gap = max(int(round(0.30 * fs)), int(0.5 * median_ibi))
         merged = [peaks[0]]
         for p in peaks[1:]:
             if p - merged[-1] < min_gap:
@@ -195,9 +206,16 @@ def _clean_ibis(ibis_ms: np.ndarray) -> np.ndarray:
     return kept[keep_local]
 
 
-def extract_hrv(bvp: np.ndarray, fps: float) -> Optional[HRVResult]:
+def extract_hrv(
+    bvp: np.ndarray, fps: float, hr_prior_bpm: Optional[float] = None
+) -> Optional[HRVResult]:
     """
     Main entry point. Returns None if a reliable HRV estimate cannot be formed.
+
+    `hr_prior_bpm` is the heart-rate estimate from the caller (typically
+    PhysMamba or Welch on the same waveform). When supplied it is used to
+    set TERMA's refractory window, which dramatically reduces dicrotic
+    double-picks on noisy rPPG signals.
     """
     if len(bvp) == 0 or fps <= 0:
         return None
@@ -208,7 +226,7 @@ def extract_hrv(bvp: np.ndarray, fps: float) -> Optional[HRVResult]:
 
     # Elgendi TERMA peak detection — far higher recall than a global
     # prominence threshold on noisy rPPG BVP.
-    peaks = _elgendi_terma_peaks(sig, TARGET_FPS)
+    peaks = _elgendi_terma_peaks(sig, TARGET_FPS, hr_prior_bpm=hr_prior_bpm)
     if len(peaks) < 20:
         logger.info(f"HRV rejected: only {len(peaks)} TERMA peaks detected")
         return None
