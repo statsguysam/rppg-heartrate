@@ -312,6 +312,26 @@ def extract_hrv(
     rmssd = float(np.sqrt(np.mean(diffs ** 2)))
     sdnn = float(np.std(clean, ddof=1))
     pnn50 = float(np.mean(np.abs(diffs) > 50.0))
+
+    # Plausibility gate on the rhythm itself. CVSD = RMSSD / mean(RR) is the
+    # standard normalised beat-to-beat variability; healthy resting subjects
+    # are 1–7 %, atrial fibrillation tops out near 12 %. A CVSD above 15 %
+    # means the surviving IBIs jitter by more than a sixth of the cycle on
+    # average — biologically implausible and a clear signature of peak
+    # localisation noise (e.g. β=0.005 picking the wrong sample within a
+    # block of interest). Returning these values would feed garbage into
+    # RMSSD / SDNN / pNN50 and into the stress score.
+    mean_rr = float(np.mean(clean))
+    cvsd = rmssd / max(mean_rr, 1e-6)
+    if cvsd > 0.15:
+        logger.info(
+            f"HRV rejected: CVSD {cvsd:.1%} > 15% — peak-jitter noise, not real HRV "
+            f"(RMSSD={rmssd:.0f}ms, mean_RR={mean_rr:.0f}ms, n={len(clean)}, "
+            f"raw={diag['raw']} →physio={diag['after_physio']} "
+            f"→global={diag['after_global']} →consec={diag['after_consec']})"
+        )
+        return None
+
     mean_hr = float(60000.0 / np.mean(clean))
 
     # Confidence: (clean / detected) × (1 − ibi_cv clipped).
